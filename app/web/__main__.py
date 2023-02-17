@@ -15,9 +15,10 @@ def index():
 @app.errorhandler(HTTPException)
 def http_error(e):
     res = e.get_response()
-    res.data = response({
+    res.data = response(app, {
         "code": e.code,
-        "message": e.name})
+        "message": e.name}).data
     res.content_type = "application/json"
-    return response
+    return res
 
+app.run(port=3000)
