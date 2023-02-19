@@ -29,13 +29,13 @@ def subQuestion(result, img, from_box):
     for line in result:
         next_box = line[0]
         text = line[1][0]
-        # 是选项
-        if not re.match("^.{0,7}[a-zA-Z0-9]\s*[.:。：\]】]\s*\S{2,}", text): break
         # 是否有其它行（选项）包含在该小题题干下
         if next_box[0][0] > left_top[0]\
-            and next_box[0][1] < left_top[1]\
+            and next_box[0][1] > left_top[1]\
             and next_box[2][0] - right_bottom[0] < 0.05 * width \
             and next_box[2][1] - right_bottom[1] < 0.05 * height:
+            # 不是选项就跳出该行
+            if not re.match("^.{0,7}[a-zA-Z]\s*[.:。：\]】]\s*\S{2,}", text): break
             sub_lines.append(line)
             sub_lines.extend(subQuestion(result, img, from_box=next_box))
     return sub_lines
@@ -74,10 +74,11 @@ def main():
         if re.match("^.{0,7}\d{1,3}\s*[.:。：\]】]", text):
             # 是小题题干
             print(line[1][0])
+            draw.polygon([tuple(int(n) for n in xy) for xy in line[0]], (0, 255, 0, 40), outline=(0, 255, 0, 255))
             ques = subQuestion(result, img, from_box=line[0])
             print(str(ques) + "\n")
             for line in ques:
-                draw.polygon([tuple(int(n) for n in xy) for xy in line[0]], (0, 255, 0, 40), outline=(0, 255, 0, 255))
+                draw.polygon([tuple(int(n) for n in xy) for xy in line[0]], (0, 0, 255, 40), outline=(0, 0, 255, 255))
 
     
     img.save("output.jpg")
