@@ -4,28 +4,31 @@ from PIL import Image, ImageDraw, ExifTags
 import re, sys
 import json, os
 
-def subQuestion(result, img, from_box):
+def nextLine(result, img, from_line)
+    
+
+def subQuestion(result, img, from_line):
     width, height = img.size
-    last_box = from_box[:]
+    from_box = from_line[0]
     # 克隆 list 防止干扰整体
     
-    left_top = last_box[0]
+    left_top = from_box[0]
     
-    right_top = last_box[1]
+    right_top = from_box[1]
     right_top[0] += 0.2 * width
     # 向右延伸
 
-    right_bottom = last_box[2]
+    right_bottom = from_box[2]
     right_bottom[0] += 0.2 * width
     right_bottom[1] += 0.1 * height
     # 向右向下延伸
 
-    left_bottom = last_box[3]
+    left_bottom = from_box[3]
     left_bottom[0] += 0.05 * width
     left_bottom[1] += 0.1 * height
     # 向左收缩，向下延伸
     
-    sub_lines = []
+    sub_lines = [from_line]
     for line in result:
         next_box = line[0]
         text = line[1][0]
@@ -34,10 +37,25 @@ def subQuestion(result, img, from_box):
             and next_box[0][1] > left_top[1]\
             and next_box[2][0] - right_bottom[0] < 0.05 * width \
             and next_box[2][1] - right_bottom[1] < 0.05 * height:
-            # 不是选项就跳出该行
-            if not re.match("^.{0,7}[a-zA-Z]\s*[.:。：\]】]\s*\S{2,}", text): break
-            sub_lines.append(line)
-            sub_lines.extend(subQuestion(result, img, from_box=next_box))
+            # 遇到下一题号就退出
+            if re.match("^.{0,7}\d{1,3}\s*[.:。：\]】]", text):
+                break
+            if re.match("^.{0,7}[a-zA-Z]\s*[.:。：\]】]\s*\S{2,}", text):
+                # 是新选项
+                sub_lines.append(line)
+                sub_lines.extend(subQuestion(result, img, from_line=line))
+            else:
+                # 是文本换行
+                # 扩展右下和左下的 box
+                box = list(sub_lines[-1][0])
+                box[2] = next_box[2]
+                box[3] = next_box[3]
+                sub_lines[-1][0] = box
+                # 将下段文本连接到上行文字
+                text_list = list(sub_lines[-1][1])
+                text_list[0] += text
+                sub_lines[-1][1] = text_list
+            break
     return sub_lines
 
 
@@ -73,11 +91,12 @@ def main():
         draw.polygon([tuple(int(n) for n in xy) for xy in line[0]], (255, 0, 0, 10), outline=(255, 0, 0, 255))
         if re.match("^.{0,7}\d{1,3}\s*[.:。：\]】]", text):
             # 是小题题干
-            print(line[1][0])
+            # print(line[1][0])
             draw.polygon([tuple(int(n) for n in xy) for xy in line[0]], (0, 255, 0, 40), outline=(0, 255, 0, 255))
-            ques = subQuestion(result, img, from_box=line[0])
-            print(str(ques) + "\n")
+            ques = subQuestion(result, img, from_line=line)
+            #print(str(ques[]) + "\n")
             for line in ques:
+                print(line[1][0])
                 draw.polygon([tuple(int(n) for n in xy) for xy in line[0]], (0, 0, 255, 40), outline=(0, 0, 255, 255))
 
     
