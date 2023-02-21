@@ -4,10 +4,7 @@ from PIL import Image, ImageDraw, ExifTags
 import re, sys
 import json, os
 
-def nextLine(result, img, from_line)
-    
-
-def subQuestion(result, img, from_line):
+def nextLine(from_line, do_next):
     width, height = img.size
     from_box = from_line[0]
     # 克隆 list 防止干扰整体
@@ -28,35 +25,47 @@ def subQuestion(result, img, from_line):
     left_bottom[1] += 0.1 * height
     # 向左收缩，向下延伸
     
-    sub_lines = [from_line]
-    for line in result:
-        next_box = line[0]
-        text = line[1][0]
-        # 是否有其它行（选项）包含在该小题题干下
-        if next_box[0][0] > left_top[0]\
-            and next_box[0][1] > left_top[1]\
-            and next_box[2][0] - right_bottom[0] < 0.05 * width \
-            and next_box[2][1] - right_bottom[1] < 0.05 * height:
-            # 遇到下一题号就退出
-            if re.match("^.{0,7}\d{1,3}\s*[.:。：\]】]", text):
-                break
-            if re.match("^.{0,7}[a-zA-Z]\s*[.:。：\]】]\s*\S{2,}", text):
-                # 是新选项
-                sub_lines.append(line)
-                sub_lines.extend(subQuestion(result, img, from_line=line))
-            else:
-                # 是文本换行
-                # 扩展右下和左下的 box
-                box = list(sub_lines[-1][0])
-                box[2] = next_box[2]
-                box[3] = next_box[3]
-                sub_lines[-1][0] = box
-                # 将下段文本连接到上行文字
-                text_list = list(sub_lines[-1][1])
-                text_list[0] += text
-                sub_lines[-1][1] = text_list
-            break
-    return sub_lines
+    all_lines = [from_line]
+
+    # 在 result 中找到最近一个包含在该行下的新行
+    next_line = next(filter(lambda next_line: \
+        next_line[0][0][0] > left_top[0] \
+        and next_line[0][0][1] > left_top[1] \
+        and next_line[0][2][0] - right_bottom[0] < 0.05 * width \
+        and next_line[0][2][1] - right_bottom[1] < 0.05 * height, result), None)
+    print(next_line)
+    
+    next_do = do_next(next_line) if next_line else "STOP" # 对新行的处理
+    if next_do == "NEW_LINE": # 新行
+        all_lines.extend(nextLine(next_line, do_next))
+    elif next_do == "CONNECT_LINE": # 延续旧行（连结换行）
+        # 扩展右下和左下的 box
+        box = list(all_lines[-1][0])
+        box[2] = next_line[0][2]
+        box[3] = next_line[0][3]
+        all_lines[-1][0] = tuple(box)
+        # 将下段文本连接到上行文字
+        text_list = list(all_lines[-1][1])
+        text_list[0] += next_line[1][0]
+        all_lines[-1][1] = tuple(text_list)
+        all_lines.extend(nextLine(next_line, do_next))
+
+    return all_lines
+
+
+def subQuestion(from_line):
+    def do_next(next_line):
+        text = next_line[1][0]
+        if re.match("^.{0,7}\d{1,3}\s*[.:。：\]】]", text):
+            # 发现题号停止
+            return "STOP"
+        elif re.match("^.{0,7}[a-zA-Z]\s*[.:。：\]】]\s*\S{2,}", text):
+            # 新选项新行
+            return "NEW_LINE"
+        else:
+            return "CONNECT_LINE"
+
+    return nextLine(from_line, do_next)
 
 
 def main():
@@ -64,6 +73,7 @@ def main():
     ocr = PaddleOCR(det_db_box_thresh=0.3, use_angle_cls = True, use_gpu = False, show_log = False,\
         lang=sys.argv[1] or "ch")
 
+    global result, img
     result = ocr.ocr(image_path, cls=True)[0]
     img = Image.open(image_path)
     
@@ -93,7 +103,7 @@ def main():
             # 是小题题干
             # print(line[1][0])
             draw.polygon([tuple(int(n) for n in xy) for xy in line[0]], (0, 255, 0, 40), outline=(0, 255, 0, 255))
-            ques = subQuestion(result, img, from_line=line)
+            ques = subQuestion(line)
             #print(str(ques[]) + "\n")
             for line in ques:
                 print(line[1][0])
