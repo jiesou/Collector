@@ -81,21 +81,21 @@ def subOptions(from_line):
     # 克隆 list 防止干扰整体
 
     left_top = from_box[0]
-    left_top[0] -= 0.1 * width
+    left_top[0] -= 0.05 * width
     # 向左延伸
     
     right_top = from_box[1]
-    right_top[0] += 0.3 * width
+    right_top[0] += 0.05 * width
     # 向右延伸
 
     right_bottom = from_box[2]
-    right_bottom[0] += 0.3 * width
-    right_bottom[1] += 0.3 * height
+    right_bottom[0] += 0.05 * width
+    right_bottom[1] += 0.2 * height
     # 向右向下延伸
 
     left_bottom = from_box[3]
-    left_bottom[0] -= 0.1 * width
-    left_bottom[1] += 0.3 * height
+    left_bottom[0] -= 0.05 * width
+    left_bottom[1] += 0.2 * height
     # 向左向下延伸
     
     for next_line in result:
@@ -110,21 +110,20 @@ def subOptions(from_line):
         # if next(filter(lambda line: line==next_line, from_lines), None) == None:
         
         # 文本符合 新题号 则退出
-        # if re.match("^\D{0,7}\d{1,3}\s*[.:。：\]】]", next_text): break
+        if re.match("^\D{0,7}\d{1,3}\s*[.:。：\]】]", next_text): break
 
         # 文本符合 新选项 则添加新选项
         is_option = re.match("^[^a-zA-Z]{0,7}([a-zA-Z])\s*[.:。：\]】]\s*(\S{2,}.*)", next_text)
         if is_option:
             options.append({
-                "choose": is_option.group(1),
+                "choice": is_option.group(1),
                 "text": is_option.group(2),
                 "box": next_box
             })
         else:
             # 不是新题号也不是新选项
             # 则连接上条选项的文本（是换行）
-            options[-1]["text"] += is_option.group(2)
-        print(options)
+            if len(options): options[-1]["text"] += next_text
     return options
         
 
@@ -188,7 +187,9 @@ def main():
         draw.polygon([tuple(int(n) for n in xy) for xy in line[0]], (255, 0, 0, 10), outline=(255, 0, 0, 255))
         ques = subQuestion(line)
         if ques:
-            print(ques)
+            print("{}. {}".format(ques["num"],ques["text"]))
+            for option in ques["options"]:
+                print("-- {}. {}".format(option["choice"], option["text"]))
             draw.polygon([tuple(int(n) for n in xy) for xy in ques["box"]], (0, 0, 255, 40), outline=(0, 0, 255, 255))
                 
     img.save("output.jpg")
