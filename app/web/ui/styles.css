@@ -1,0 +1,14 @@
+#imgs-card {
+    margin-top: 10vh;
+    padding-top: 5vh;
+    padding-bottom: 5vh;
+}
+
+.mdui-btn-icon {
+    margin-right: 0.7em;
+}
+
+.mdui-list-item-one-line {
+    /*修复换行溢出*/
+    height: revert;
+}
