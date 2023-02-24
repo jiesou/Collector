@@ -1,6 +1,6 @@
 import logging
 logging.basicConfig(level=logging.DEBUG,
-    format='collect::%(asctime)s.%(msecs)03d-%(levelname)s-%(message)s',
+    format='collector::%(asctime)s.%(msecs)03d-%(levelname)s-%(message)s',
     datefmt='%H:%M:%S')
 logging.info("初始化...")
 
