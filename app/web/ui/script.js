@@ -1,16 +1,20 @@
 $ = mdui.$;
 
-$("#upload-img-bt").on("click", () => {
-    // tks https://stackoverflow.com/a/50782106
-    const fileInput = document.createElement("input")
-    fileInput.type = 'file'
-    fileInput.accept = 'image/*'
-    fileInput.style.display = 'none'
-    fileInput.multiple = true
-    fileInput.onchange = (e) => {
+USER_ID = Math.random().toString(36).slice(-10) +
+        new Date().getTime().toString(32).slice(-4);
+
+
+function ThrowError(error) {
+    console.error("Error", error);
+    mdui.snackbar(error.message || error);
+}
+
+((fileInput, uploadBt) => {
+  // 当点击上传图片按钮时触发被隐藏的 input
+  uploadBt.on("click", () => fileInput.trigger('click'));
+  fileInput.on("change", (e) => {
+      // 先让上传图片按钮变灰，防止同时上传多条
       $("#upload-img-bt").attr('disabled', true)
-      const timestamp = String(new Date().getTime());
-      const reader = new FileReader();
       const data = new FormData();
       for (let file of e.target.files) {
         data.append('file', file);
@@ -18,11 +22,11 @@ $("#upload-img-bt").on("click", () => {
       fetch("/upload", {
           method: 'POST',
           body: data,
-          headers: { 'X-Timestamp': timestamp,
-          'Content-Type': 'multipart/form-data' }
-      });
-      document.body.removeChild(fileInput);
-    }
-    document.body.appendChild(fileInput);
-    fileInput.click();
-});
+          headers: { 'User-Id': USER_ID }
+      }).then((res) => res.json()).then((res) => {
+        if (res.code === 0) {
+          uploadBt.removeAttr('disabled');
+        } else ThrowError(res);
+      }).catch((e) => ThrowError(e));
+  });
+})($("#upload-img-input"), $("#upload-img-bt"));
