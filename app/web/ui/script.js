@@ -1,8 +1,9 @@
 $ = mdui.$;
 
-USER_ID = Math.random().toString(36).slice(-10) +
+const USER_ID = localStorage.getItem("user-id") ||
+        Math.random().toString(36).slice(-10) +
         new Date().getTime().toString(32).slice(-4);
-
+localStorage.setItem("user-id", USER_ID);
 
 function ThrowError(error) {
     console.error("Error", error);
@@ -19,7 +20,7 @@ function ThrowError(error) {
       for (let file of e.target.files) {
         data.append('file', file);
       }
-      fetch("/upload", {
+      fetch("/api/upload_imgs", {
           method: 'POST',
           body: data,
           headers: { 'User-Id': USER_ID }
