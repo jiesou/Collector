@@ -55,11 +55,12 @@ def serve_results(file):
 
 @app.route('/api/upload_imgs', methods=['POST'])
 def upload_imgs():
+    user_imgs = users[g.user_id]["imgs"]
     for index, file in enumerate(request.files.getlist('file')):
         name, ext = os.path.splitext(file.filename)
-        filename = '{}-{}{}'.format(g.user_id, str(index), ext)
+        filename = '{}-{}{}'.format(g.user_id, str(len(user_imgs) + index), ext)
         
-        users[g.user_id]["imgs"].append({
+        user_imgs.append({
             "url": "/user-upload/" + filename
         })
         file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
