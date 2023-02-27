@@ -10,6 +10,13 @@ function ThrowError(error) {
     mdui.snackbar(error.message || error);
 }
 
+async function refreshImgList() {
+  img_list = await fetch("/api/get_imgs_list", {
+      headers: { 'User-Id': USER_ID }
+  }).json()
+  
+}
+
 ((fileInput, uploadBt) => {
   // 当点击上传图片按钮时触发被隐藏的 input
   uploadBt.on("click", () => fileInput.trigger('click'));

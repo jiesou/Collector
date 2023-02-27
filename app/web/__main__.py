@@ -49,9 +49,12 @@ def index():
     return send_from_directory('ui', 'index.html')
 
 @app.route('/<path:file>')
-def serve_results(file):
+def static_ui(file):
     return send_from_directory('ui', file)
 
+@app.route('/user-upload/<path:file>')
+def user_upload(file):
+    return send_from_directory(app.config['UPLOAD_FOLDER'], file)
 
 @app.route('/api/upload_imgs', methods=['POST'])
 def upload_imgs():
