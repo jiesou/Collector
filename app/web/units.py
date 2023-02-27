@@ -1,3 +1,7 @@
+import os, json
+from collections import UserDict
+
+
 def res(app, data):
     #mdict["code"] = mdict.get("code", 0)
     json = {}
@@ -12,3 +16,16 @@ def res(app, data):
     res = app.json.response(json)
     if json['code'] < 0: res.status = 400
     return res
+
+class Users(UserDict):
+    def __init__(self, json_path):
+        self.json_file = open(json_path, "w+")
+        if not self.json_file.read():
+            self.json_file.write(json.dumps({}))
+            self.json_file.seek(0)
+        self.data = json.load(self.json_file)
+        self.json_file.seek(0)
+    def save(self):
+        print(self.data)
+        json.dump(self.data, self.json_file)
+        self.json_file.seek(0)
