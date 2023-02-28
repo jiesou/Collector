@@ -1,6 +1,7 @@
 from flask import Flask, send_from_directory, request, g
 from werkzeug.exceptions import HTTPException
-from .units import res, Users
+from units import res, Users
+import ocr
 import os, time
 
 app = Flask(__name__)
@@ -73,10 +74,15 @@ def upload_imgs():
 def get_imgs_list():
     return res(app, g.user["imgs"])
 
+@app.route('/api/scan_imgs')
+def scan_imgs():
+    return res(app, g.user["imgs"])
+
 @app.route('/api')
 def api_index():
     return res(app, {
         'status': 'running',
         'version': '1.0.0'})
 
-app.run(port=3000, use_reloader=True)
+if __name__ == '__main__':
+    app.run(port=3000, use_reloader=True)

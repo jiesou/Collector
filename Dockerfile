@@ -6,3 +6,5 @@ COPY app/requirements.txt .
 RUN python3 -m pip install -r requirements.txt
 
 COPY app .
+
+CMD ["gunicorn", "web:app", "-c", "./gunicorn.conf.py"]
