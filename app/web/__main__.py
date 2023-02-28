@@ -67,7 +67,7 @@ def upload_imgs():
             "url": "/user-upload/" + filename
         })
         file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-    return res(app, {'message': 'ok'})
+    return res(app, user_imgs)
 
 @app.route('/api/get_imgs_list')
 def get_imgs_list():

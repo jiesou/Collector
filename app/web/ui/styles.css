@@ -9,6 +9,10 @@
 #imgs-card .mdui-card-content {
     margin-top: 2vh;
 }
+user-imgs-row img::after {
+    content: url(/img/loading.gif); /* 占位图 */
+}
+
 #output-card {
     margin-top: 7vh;
     padding: 2vh;
@@ -23,4 +27,8 @@
 .mdui-list-item-one-line {
     /*修复换行溢出*/
     height: revert;
+}
+
+[class$="-template"] {
+    display: none;
 }
