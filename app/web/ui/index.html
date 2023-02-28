@@ -27,10 +27,35 @@
             
             <div id="imgs-card" class="mdui-card">
             
-                <img src="loading.gif">
+            <div class="mdui-card-menu">
+                <button id="upload-img-bt" class="mdui-float-right mdui-btn mdui-btn-icon mdui-ripple">
+                  <i class="mdui-icon material-icons">add</i>
+                </button>
+            </div>
+            
+            <div class="mdui-card-content">
 
-                <button id="upload-img-bt" class="mdui-btn mdui-btn-raised mdui-ripple mdui-color-theme-accent mdui-center">上传图片</button>
+                <div id="user-imgs-row" class="mdui-row-xs-2">
+                  <img src="/img/loading.gif" class="mdui-col-xs-4 mdui-col-md-2">
+                  <img src="/img/loading.gif" class="mdui-col-xs-4 mdui-col-md-2">
+                  <img src="/img/loading.gif" class="mdui-col-xs-4 mdui-col-md-2">
+                  <img src="/img/loading.gif" class="mdui-col-xs-4 mdui-col-md-2">
+                  <img src="/img/loading.gif" class="mdui-col-xs-4 mdui-col-md-2">
+                  <img src="/img/loading.gif" class="mdui-col-xs-4 mdui-col-md-2">
+                </div>
+
+                <button id="scan-imgs-bt" class="mdui-btn mdui-btn-raised mdui-ripple mdui-color-theme-accent mdui-center">开始识别</button>
+                
                 <input id="upload-img-input" type="file" accept="image/*" multiple style="display: none;">
+                
+            </div>
+            </div>
+            
+            <div id="output-card" class="mdui-card">
+
+              <div id="output-text" class="mdui-textfield">
+                <textarea class="mdui-textfield-input" rows="4" placeholder="Prompt"></textarea>
+              </div>
 
             </div>
 

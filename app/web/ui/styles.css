@@ -1,7 +1,19 @@
+.mdui-container {
+    position: flex;
+}
 #imgs-card {
-    margin-top: 10vh;
-    padding-top: 5vh;
+    margin-top: 7vh;
+    padding-top: 2vh;
     padding-bottom: 5vh;
+}
+#imgs-card .mdui-card-content {
+    margin-top: 2vh;
+}
+#output-card {
+    margin-top: 7vh;
+    padding: 2vh;
+    padding-top: 0;
+    display: none;
 }
 
 .mdui-btn-icon {
