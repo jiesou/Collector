@@ -72,6 +72,7 @@ def upload_imgs():
 
 @app.route('/api/get_imgs_list')
 def get_imgs_list():
+    print(g.user)
     return res(app, g.user["imgs"])
 
 @app.route('/api/scan_imgs')

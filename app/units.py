@@ -20,10 +20,6 @@ def res(app, data):
 class Users(UserDict):
     def __init__(self, json_path):
         self.json_file = open(json_path, "r+")
-        # 读取首字节来查看文件是否是不是空的
-        if not self.json_file.read(1):
-            self.json_file.write("{}")
-        self.json_file.seek(0)
         self.data = json.load(self.json_file)
         self.json_file.seek(0)
     def save(self):

@@ -16,7 +16,7 @@ async function refreshImgsRow(img_list) {
         headers: { 'User-Id': USER_ID }
     });
     img_list = await img_list.json();
-    img_list = img_list.data;
+    img_list = img_list.data || [];
   }
   
   imgs_row = $("#user-imgs-row");

@@ -13,6 +13,10 @@ user-imgs-row img::after {
     content: url(/img/loading.gif); /* 占位图 */
 }
 
+#scan-imgs-bt {
+    margin-top: 1vh;
+}
+
 #output-card {
     margin-top: 7vh;
     padding: 2vh;
