@@ -19,9 +19,9 @@ def res(app, data):
 
 class Users(UserDict):
     def __init__(self, json_path):
-        self.json_file = open(json_path, "r+")
-        self.data = json.load(self.json_file)
-        self.json_file.seek(0)
+        self.json_path = json_path
+        with open(self.json_path, "r") as json_file:
+            self.data = json.load(json_file)
     def save(self):
-        json.dump(self.data, self.json_file)
-        self.json_file.seek(0)
+        with open(self.json_path, "w") as json_file:
+            json.dump(self.data, json_file)

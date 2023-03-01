@@ -5,25 +5,32 @@ const USER_ID = localStorage.getItem("user-id") ||
         new Date().getTime().toString(32).slice(-4);
 localStorage.setItem("user-id", USER_ID);
 
-function ThrowError(error) {
-    console.error("Error", error);
-    mdui.snackbar(error.message || error);
+
+async function apiFetch(path, args={}) {
+    args = Object.assign(args, {
+        method: 'GET',
+        headers: { 'User-Id': USER_ID }
+    });
+    try {
+      let res = await fetch(path, args);
+      res = await res.json();
+      if (res.code === 0) return res.data
+    } catch (error) {
+      console.error("apiFetch", error);
+      mdui.snackbar(error.message);
+    }
 }
+
 
 async function refreshImgsRow(img_list) {
   if (!img_list) {
-    img_list = await fetch("/api/get_imgs_list", {
-        headers: { 'User-Id': USER_ID }
-    });
-    img_list = await img_list.json();
-    img_list = img_list.data || [];
+    img_list = await apiFetch("/api/get_imgs_list") || [];
   }
   
   imgs_row = $("#user-imgs-row");
 
   // 移除所有非 template 的图片
   imgs_row.children(':not(img[class$="-template"])').remove();
-  console.log(img_list)
   img_list.forEach((img) => {
     img_ele = imgs_row.children(".user-img-template").clone().removeClass("user-img-template");
     img_ele.attr("src", img.url);
@@ -44,17 +51,35 @@ async function refreshImgsRow(img_list) {
       for (let file of e.target.files) {
         data.append('file', file);
       }
-      fetch("/api/upload_imgs", {
+      apiFetch("/api/upload_imgs", {
           method: 'POST',
-          body: data,
-          headers: { 'User-Id': USER_ID }
-      }).then((res) => res.json()).then((res) => {
-        if (res.code === 0) {
-            refreshImgsRow(res.data).then(()=> uploadBt.removeAttr('disabled'));
-        } else ThrowError(res);
-      }).catch((e) => ThrowError(e));
+          body: data
+      }).then((res) => {
+          refreshImgsRow(res).then(()=> uploadBt.removeAttr('disabled'));
+      });
   });
 })($("#upload-img-input"), $("#upload-img-bt"));
 
+function formatDocument(document) {
+    let text = ""
+    for (let element of result) {
+      if (element.type === "choice_ques") {
+          text += `${element["num"]}. ${element["text"]}`;
+          for (let option of element["options"]) {
+            text += `-- ${option["choice"]}. ${option["text"]}`;
+          }
+      }
+    }
+}
+
 $("#scan-imgs-bt").on("click", () => {
+    apiFetch("/api/scan_imgs").then((res) => {
+        let text = ""
+        for (let doc in res) {
+          text += formatDocument(doc);
+        }
+
+        $("output-text").val(text);
+        $("output-card").show();
+    });
 });

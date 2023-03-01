@@ -1,7 +1,7 @@
 from flask import Flask, send_from_directory, request, g
 from werkzeug.exceptions import HTTPException
 from units import res, Users
-import ocr
+from ocr import Image2Document
 import os, time
 
 app = Flask(__name__)
@@ -32,6 +32,7 @@ def authentication():
         g.user = users.get(g.user_id, {
             "imgs": []
         })
+        
         users[g.user_id] = g.user
     else:
         return res(app, {
@@ -41,8 +42,8 @@ def authentication():
 
 @app.after_request
 def save_users(res):
-    if not request.path.startswith("/api/"): return res
-    users.save()
+    if request.path.startswith("/api/"):
+        users.save()
     return res
 
 @app.route('/')
@@ -60,9 +61,9 @@ def user_upload(file):
 @app.route('/api/upload_imgs', methods=['POST'])
 def upload_imgs():
     user_imgs = users[g.user_id]["imgs"]
-    for index, file in enumerate(request.files.getlist('file')):
+    for file in request.files.getlist('file'):
         name, ext = os.path.splitext(file.filename)
-        filename = '{}-{}{}'.format(g.user_id, str(len(user_imgs) + index), ext)
+        filename = '{}-{}{}'.format(g.user_id, str(len(user_imgs) + 1), ext)
         
         user_imgs.append({
             "url": "/user-upload/" + filename
@@ -72,12 +73,17 @@ def upload_imgs():
 
 @app.route('/api/get_imgs_list')
 def get_imgs_list():
-    print(g.user)
     return res(app, g.user["imgs"])
 
 @app.route('/api/scan_imgs')
 def scan_imgs():
-    return res(app, g.user["imgs"])
+    pages = []
+    for img in g.user["imgs"]:
+        # 加一个点，将URL的根目录转为文件系统相对路径
+        document = Image2Document('.' + img["url"])
+        img["document"] = document
+        pages.append(document)
+    return res(app, pages)
 
 @app.route('/api')
 def api_index():

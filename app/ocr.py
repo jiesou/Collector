@@ -145,18 +145,18 @@ def subQuestion(from_line):
     is_ques = re.match("^\D{0,7}(\d{1,3})\s*[.:。：\]】]\s*(\S{2,}.*)", from_line[1][0])
     if is_ques:
         return {
-            "num": is_ques.group(1),
-            "text": is_ques.group(2),
-            "options": subOptions(from_line),
-            "box": from_line[0]
+            type: "choice_ques",
+            num: is_ques.group(1),
+            text: is_ques.group(2),
+            options: subOptions(from_line),
+            box: from_line[0]
         }
 
 
-def main():
-    image_path = "temp.jpg"
+def Image2Document(image_path = "temp.jpg", lang = sys.argv[1] if sys.argv else "ch"):
     logging.info("准备 OCR...")
     ocr = PaddleOCR(det_db_box_thresh=0.3, use_angle_cls = True, use_gpu = False, show_log = False,
-        lang=sys.argv[1] if sys.argv else "ch")
+        lang=lang)
 
     logging.info("开始 OCR...")
     global result, img
@@ -215,4 +215,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    Image2Document()
