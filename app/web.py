@@ -79,10 +79,10 @@ def get_imgs_list():
 def scan_imgs():
     pages = []
     for img in g.user["imgs"]:
-        # 加一个点，将URL的根目录转为文件系统相对路径
-        document = Image2Document('.' + img["url"])
-        img["document"] = document
-        pages.append(document)
+        # 连接 "data" 将URL的根目录转为文件系统相对路径
+        doc = img.get("document", Image2Document('data' + img["url"]))
+        img["document"] = doc
+        pages.append(doc)
     return res(app, pages)
 
 @app.route('/api')

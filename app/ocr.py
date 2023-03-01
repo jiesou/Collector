@@ -153,7 +153,7 @@ def subQuestion(from_line):
         }
 
 
-def Image2Document(image_path = "temp.jpg", lang = sys.argv[1] if sys.argv else "ch"):
+def Image2Document(image_path = "temp.jpg", lang = "ch"):
     logging.info("准备 OCR...")
     ocr = PaddleOCR(det_db_box_thresh=0.3, use_angle_cls = True, use_gpu = False, show_log = False,
         lang=lang)
@@ -187,9 +187,6 @@ def Image2Document(image_path = "temp.jpg", lang = sys.argv[1] if sys.argv else 
         draw.polygon([tuple(int(n) for n in xy) for xy in line[0]], (255, 0, 0, 10), outline=(255, 0, 0, 255))
         ques = subQuestion(line)
         if ques:
-            print("{}. {}".format(ques["num"],ques["text"]))
-            for option in ques["options"]:
-                print("-- {}. {}".format(option["choice"], option["text"]))
             draw.polygon([tuple(int(n) for n in xy) for xy in ques["box"]], (0, 0, 255, 40), outline=(0, 0, 255, 255))
                 
     img.save("output.jpg")
