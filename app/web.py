@@ -31,7 +31,8 @@ def authentication():
     if "User-Id" in request.headers:
         g.user_id = request.headers['User-Id']
         g.user = users.get(g.user_id, {
-            "imgs": []
+            "imgs": [],
+            "messages": []
         })
         
         users[g.user_id] = g.user
@@ -106,9 +107,6 @@ def scan_imgs():
             print("scan_imgs", threading.enumerate())
     return res(app, g.user["imgs"])
 
-
-generater = AnswersGenerater()
-
 @app.route('/api/generate_prompt', methods=['POST'])
 def generate_prompt():
     body = parse_body(request)
@@ -122,6 +120,27 @@ def generate_prompt():
     
     prompt = AnswersGenerater.generatePrompt(document)
     return res(app, {'prompt': prompt})
+
+
+@app.route('/api/generater/send', methods=['POST'])
+def generater_send():
+    # 从 用户数据 的 消息列表 中初始化 AnswersGenerater
+    generater = AnswersGenerater(g.user["messages"])
+    generater.send(request.data.decode())
+    last_message = generater.generate()
+    # 获取到 AI 回复后更新 用户数据 中的 消息列表
+    g.user["messages"] = generater.messages
+    return res(app, last_message)
+
+@app.route('/api/generater/messages')
+def generater_messages():
+    return res(app, g.user["messages"])
+
+@app.route('/api/generater/clean')
+def generater_clean():
+    g.user["messages"] = []
+    return res(app, {'message': 'ok'})
+
 
 @app.route('/api')
 def api_index():

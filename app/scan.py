@@ -1,6 +1,6 @@
 import logging
 logging.basicConfig(level=logging.DEBUG,
-    format='collector_ocr::%(asctime)s.%(msecs)03d-%(levelname)s-%(message)s',
+    format='collector::%(asctime)s.%(msecs)03d-%(levelname)s-%(message)s',
     datefmt='%H:%M:%S')
 logging.info("初始化...")
 
@@ -23,12 +23,12 @@ def getNextLine(from_lines):
     # 向右延伸
 
     right_bottom = from_box[2]
-    right_bottom[0] += 0.3 * width
+    right_bottom[0] += 0.2 * width
     right_bottom[1] += 0.1 * height
     # 向右向下延伸
 
     left_bottom = from_box[3]
-    left_bottom[0] -= 0.1 * width
+    left_bottom[0] -= 0.2 * width
     left_bottom[1] += 0.1 * height
     # 向左向下延伸
     
