@@ -1,6 +1,6 @@
 import logging
 logging.basicConfig(level=logging.DEBUG,
-    format='collector::%(asctime)s.%(msecs)03d-%(levelname)s-%(message)s',
+    format='collector_ocr::%(asctime)s.%(msecs)03d-%(levelname)s-%(message)s',
     datefmt='%H:%M:%S')
 logging.info("初始化...")
 
@@ -32,7 +32,7 @@ def getNextLine(from_lines):
     left_bottom[1] += 0.1 * height
     # 向左向下延伸
     
-    for next_line in result:
+    for next_line in ocr_result:
         next_box = next_line[0]
         # 获取到的下一行需包含在该行下
         if (next_box[0][0] > left_top[0]\
@@ -98,7 +98,7 @@ def subOptions(from_line):
     left_bottom[1] += 0.2 * height
     # 向左向下延伸
     
-    for next_line in result:
+    for next_line in ocr_result:
         next_box = next_line[0]
         next_text = next_line[1][0]
         # 获取到的选项需包含在题干下
@@ -145,11 +145,11 @@ def subQuestion(from_line):
     is_ques = re.match("^\D{0,7}(\d{1,3})\s*[.:。：\]】]\s*(\S{2,}.*)", from_line[1][0])
     if is_ques:
         return {
-            type: "choice_ques",
-            num: is_ques.group(1),
-            text: is_ques.group(2),
-            options: subOptions(from_line),
-            box: from_line[0]
+            'type': "choice_ques",
+            'num': is_ques.group(1),
+            'text': is_ques.group(2),
+            'options': subOptions(from_line),
+            'box': from_line[0]
         }
 
 
@@ -159,8 +159,8 @@ def Image2Document(image_path = "temp.jpg", lang = "ch"):
         lang=lang)
 
     logging.info("开始 OCR...")
-    global result, img
-    result = ocr.ocr(image_path, cls=True)[0]
+    global ocr_result, img
+    ocr_result = ocr.ocr(image_path, cls=True)[0]
     logging.info("开始处理文档...")
     img = Image.open(image_path)
     
@@ -182,18 +182,21 @@ def Image2Document(image_path = "temp.jpg", lang = "ch"):
     draw = ImageDraw.Draw(img, "RGBA")
         
     
-    for line in result:
+    docment_result = []
+    for line in ocr_result:
         text = line[1][0]
         draw.polygon([tuple(int(n) for n in xy) for xy in line[0]], (255, 0, 0, 10), outline=(255, 0, 0, 255))
         ques = subQuestion(line)
         if ques:
+            docment_result.append(ques)
             draw.polygon([tuple(int(n) for n in xy) for xy in ques["box"]], (0, 0, 255, 40), outline=(0, 0, 255, 255))
                 
     img.save("output.jpg")
     
     logging.info("完成！")
+    return docment_result
     
-    # text = "\n".join([line[1][0] for line in result])
+    # text = "\n".join([line[1][0] for line in ocr_result])
 
     # # filter consecutive whitespace
     # text = re.sub(r"(\S)\s\s*", r"\1\n", text)

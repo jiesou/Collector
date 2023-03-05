@@ -1,8 +1,8 @@
 from flask import Flask, send_from_directory, request, g
 from werkzeug.exceptions import HTTPException
 from units import res, Users
-from ocr import Image2Document
-import os, time
+from scan import Image2Document
+import os, time, threading
 
 app = Flask(__name__)
 
@@ -75,15 +75,35 @@ def upload_imgs():
 def get_imgs_list():
     return res(app, g.user["imgs"])
 
+lock = threading.Lock()
+# 设置最大线程数为 2
+semaphore = threading.BoundedSemaphore(2)
+
+def ScanImgAndSave(img):
+    semaphore.acquire()
+    # 连接 "data" 将URL的根目录转为文件系统相对路径
+    result = Image2Document('data' + img["url"])
+    # 在锁中进行用户数据、文件系统操作
+    with lock:
+        img["document"] = result
+        img["document_status"] = "finished"
+        users.save()
+        print(img["url"], "saved")
+        pass
+    semaphore.release()
+
 @app.route('/api/scan_imgs')
 def scan_imgs():
-    pages = []
     for img in g.user["imgs"]:
-        # 连接 "data" 将URL的根目录转为文件系统相对路径
-        doc = img.get("document", Image2Document('data' + img["url"]))
-        img["document"] = doc
-        pages.append(doc)
-    return res(app, pages)
+        doc = img.get("document")
+        if doc is None:
+            document_thread = threading.Thread(target=ScanImgAndSave,
+                args=(img,),
+                daemon=True)
+            document_thread.start()
+            img["document_status"] = "doing"
+            print("scan_imgs", threading.enumerate())
+    return res(app, g.user["imgs"])
 
 @app.route('/api')
 def api_index():
