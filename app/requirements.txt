@@ -1,2 +1,3 @@
 paddleocr>=2.0.1
 gunicorn
+openai

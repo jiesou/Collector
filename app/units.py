@@ -17,6 +17,17 @@ def res(app, data):
     if json['code'] < 0: res.status = 400
     return res
 
+def parse_body(req):
+    # 根据请求的内容类型解析 body
+    content_type = req.headers.get("Content-Type")
+    if content_type == "application/json":
+        data = req.json
+    elif content_type == "multipart/form-data":
+        data = req.form.to_dict()
+    else:
+        data = json.loads(req.data.decode())
+    return data
+
 class Users(UserDict):
     def __init__(self, json_path):
         self.json_path = json_path

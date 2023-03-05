@@ -1,7 +1,8 @@
 from flask import Flask, send_from_directory, request, g
 from werkzeug.exceptions import HTTPException
-from units import res, Users
+from units import res, parse_body, Users
 from scan import Image2Document
+from answer import AnswersGenerater
 import os, time, threading
 
 app = Flask(__name__)
@@ -104,6 +105,23 @@ def scan_imgs():
             img["document_status"] = "doing"
             print("scan_imgs", threading.enumerate())
     return res(app, g.user["imgs"])
+
+
+generater = AnswersGenerater()
+
+@app.route('/api/generate_prompt', methods=['POST'])
+def generate_prompt():
+    body = parse_body(request)
+    body.setdefault("imgs", g.user["imgs"])
+    # 未指定需要处理的页数就遍历全部图片
+    body.setdefault("indexs", range(len(body["imgs"])))
+    document = []
+    for index in body["indexs"]:
+        img = body["imgs"][index]
+        document += img.get("document")
+    
+    prompt = AnswersGenerater.generatePrompt(document)
+    return res(app, {'prompt': prompt})
 
 @app.route('/api')
 def api_index():
