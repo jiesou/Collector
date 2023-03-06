@@ -22,31 +22,53 @@ async function apiFetch(path, args={}) {
 }
 
 
+
 async function refreshImgsRow(img_list) {
   if (!img_list) {
-    img_list = await apiFetch("/api/get_imgs_list") || [];
+    var img_list = await apiFetch("/api/get_imgs_list") || [];
   }
   
-  imgs_row = $("#user-imgs-row");
+  const imgs_row = $("#user-imgs-row");
+  const scan_bt = $("#scan-imgs-bt");
+  scan_bt.on("click", () => {
+      // 先禁用按钮，防止同时提交多个请求
+      scan_bt.attr('disabled');
+      apiFetch("/api/scan_imgs").then((res) => {
+          mdui.snackbar("已提交请求");
+      });
+  });
 
   // 移除所有非 template 的图片
-  imgs_row.children(':not(img[class$="-template"])').remove();
+  imgs_row.children(':not([class$="-template"])').remove();
+  let imgs_loaded = 0;
   img_list.forEach((img) => {
-    img_ele = imgs_row.children(".user-img-template").clone().removeClass("user-img-template");
+    const img_frame = imgs_row.children(".user-img-template").clone().removeClass("user-img-template");
+    const img_ele = img_frame.find('img');
     img_ele.attr("src", img.url);
-    imgs_row.append(img_ele);
+    img_ele.on('load', () => {
+        imgs_loaded ++;
+        // 所有图片加载完后隐藏加载条
+        if (imgs_loaded >= img_list.length) $("#users-imgs-progress").hide();
+    });
+    imgs_row.append(img_frame);
+    
+    // 有未扫描的图片就显示提交扫描按钮
+    if (img.document_status === 'unscanned') {
+      scan_bt.removeAttr('disabled');
+    }
   });
 }
 
-((fileInput, uploadBt) => {
+((upload_input, upload_bt) => {
   // 图片表格加载出来后再允许上传图片
-  refreshImgsRow().then(()=> uploadBt.removeAttr('disabled'));
+  refreshImgsRow().then(()=>upload_bt.removeAttr('disabled'));
 
   // 当点击上传图片按钮时触发被隐藏的 input
-  uploadBt.on("click", () => fileInput.trigger('click'));
-  fileInput.on("change", (e) => {
-      // 先禁止上传图片，防止同时上传多条
-      $("#upload-img-bt").attr('disabled', true)
+  
+upload_bt.on("click", () => upload_input.trigger('click'));
+  upload_input.on("change", (e) => {
+      // 先禁用按钮，防止同时上传多条
+      upload_bt.attr('disabled', true)
       const data = new FormData();
       for (let file of e.target.files) {
         data.append('file', file);
@@ -55,7 +77,7 @@ async function refreshImgsRow(img_list) {
           method: 'POST',
           body: data
       }).then((res) => {
-          refreshImgsRow(res).then(()=> uploadBt.removeAttr('disabled'));
+          refreshImgsRow(res).then(()=>upload_bt.removeAttr('disabled'));
       });
   });
 })($("#upload-img-input"), $("#upload-img-bt"));
@@ -72,14 +94,3 @@ function formatDocument(document) {
     }
 }
 
-$("#scan-imgs-bt").on("click", () => {
-    apiFetch("/api/scan_imgs").then((res) => {
-        let text = ""
-        for (let doc in res) {
-          text += formatDocument(doc);
-        }
-
-        $("output-text").val(text);
-        $("output-card").show();
-    });
-});

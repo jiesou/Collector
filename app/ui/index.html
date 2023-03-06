@@ -35,12 +35,31 @@
             
             <div class="mdui-card-content">
 
-                <div id="user-imgs-row" class="mdui-row-xs-2">
-                  <!-- TEMPLATE user-img -->
-                  <img class="mdui-col-xs-4 mdui-col-md-2 user-img-template">
+                <div id="users-imgs-progress" class="mdui-progress">
+                  <div class="mdui-progress-indeterminate"></div>
+                </div>
+                <div id="user-imgs-row" class="mdui-row-xs-3 mdui-row-sm-4 mdui-row-md-5 mdui-row-lg-6 mdui-grid-list">
+                <!-- TEMPLATE user-img -->
+                <div class="mdui-col user-img-template">
+                    <div class="mdui-grid-tile">
+                        <div class="mdui-grid-tile-actions">
+                          <div class="mdui-grid-tile-text">
+                            <div class="mdui-grid-tile-title">1</div>
+                            <div class="mdui-grid-tile-subtitle"><i class="mdui-icon material-icons">check</i>已完成识别</div>
+                          </div>
+                          <div class="mdui-grid-tile-buttons">
+                            <button class="mdui-btn mdui-btn-icon"><i class="mdui-icon material-icons">delete</i></button>
+                          </div>
+                        </div>
+                      <img>
+                    </div>
+                </div>
                 </div>
 
-                <button id="scan-imgs-bt" class="mdui-btn mdui-btn-raised mdui-ripple mdui-color-theme-accent mdui-center">开始识别</button>
+                <button id="scan-imgs-bt"
+                    class="mdui-btn mdui-btn-raised mdui-ripple mdui-color-theme-accent mdui-center" disabled>
+                    开始识别
+                </button>
 
                 <input id="upload-img-input" type="file" accept="image/*" multiple style="display: none;">
                 

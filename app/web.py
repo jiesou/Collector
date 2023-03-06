@@ -68,7 +68,8 @@ def upload_imgs():
         filename = '{}-{}{}'.format(g.user_id, str(len(user_imgs) + 1), ext)
         
         user_imgs.append({
-            "url": "/user-upload/" + filename
+            "url": "/user-upload/" + filename,
+            "document_status": "unscanned"
         })
         file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
     return res(app, user_imgs)
@@ -88,7 +89,7 @@ def ScanImgAndSave(img):
     # 在锁中进行用户数据、文件系统操作
     with lock:
         img["document"] = result
-        img["document_status"] = "finished"
+        img["document_status"] = "scanned"
         users.save()
         print(img["url"], "saved")
         pass
@@ -103,7 +104,7 @@ def scan_imgs():
                 args=(img,),
                 daemon=True)
             document_thread.start()
-            img["document_status"] = "doing"
+            img["document_status"] = "scanning"
             print("scan_imgs", threading.enumerate())
     return res(app, g.user["imgs"])
 
