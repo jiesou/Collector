@@ -9,8 +9,12 @@
 #imgs-card .mdui-card-content {
     margin-top: 2vh;
 }
-user-imgs-row img::after {
-    content: url(/img/loading.gif); /* 占位图 */
+  /*扫描进度条*/
+#users-imgs-progress .mdui-progress-determinate {
+    display: none;
+}
+#user-imgs-row > img {
+    background-image: url(/img/loading.gif); /* 占位图 */
 }
 
 #scan-imgs-bt {

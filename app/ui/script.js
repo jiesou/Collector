@@ -21,11 +21,34 @@ async function apiFetch(path, args={}) {
     }
 }
 
+function updateProgress(percent) {
+  let progress_bar = $("#users-imgs-progress");
+  progress_bar.show();
+  if (percent) {
+    progress_bar = progress_bar.find('.mdui-progress-determinate');
+  } else {
+    progress_bar = progress_bar.find('.mdui-progress-indeterminate');
+    progress_bar.show();
+  }
+  progress_bar.css('width', `${percent*100}%`);
+  return progress_bar
+}
 
-
-async function refreshImgsRow(img_list) {
-  if (!img_list) {
-    var img_list = await apiFetch("/api/get_imgs_list") || [];
+async function pollProgress(progress_bar) {
+  imgs_list = await apiFetch("/api/get_imgs_list");
+  const finishedImgs = list.filter(img => img.document_status === "scanned");
+  const finishedPercent = finishedImgs.length/list.length;
+  if (finishedPercent >= 1) {
+    progress_bar.hide();
+    clearInterval(pollProgress);
+  }
+  updateProgress(finishedPercent);
+  // 十秒一次轮询
+  setTimeout(pollProgress, 10000);
+}
+async function refreshImgsRow(imgs_list) {
+  if (!imgs_list) {
+    var imgs_list = await apiFetch("/api/get_imgs_list") || [];
   }
   
   const imgs_row = $("#user-imgs-row");
@@ -34,22 +57,29 @@ async function refreshImgsRow(img_list) {
       // 先禁用按钮，防止同时提交多个请求
       scan_bt.attr('disabled');
       apiFetch("/api/scan_imgs").then((res) => {
+          const progress_bar = $("#users-imgs-progress")
+            .find(".mdui-progress-determinate");
+          progress_bar.css('width', 0);
+          progress_bar.show();
           mdui.snackbar("已提交请求");
+          
+          pollProgress(progress_bar);
       });
   });
 
   // 移除所有非 template 的图片
   imgs_row.children(':not([class$="-template"])').remove();
   let imgs_loaded = 0;
-  img_list.forEach((img) => {
+  imgs_list.forEach((img) => {
     const img_frame = imgs_row.children(".user-img-template").clone().removeClass("user-img-template");
     const img_ele = img_frame.find('img');
     img_ele.attr("src", img.url);
     img_ele.on('load', () => {
         imgs_loaded ++;
-        // 所有图片加载完后隐藏加载条
-        if (imgs_loaded >= img_list.length) $("#users-imgs-progress").hide();
+        if (imgs_loaded >= imgs_list.length) updateProgress().hide();
     });
+    // 没图片可加载也隐藏进度条
+    if (imgs_list.length === 0) updateProgress().hide();
     imgs_row.append(img_frame);
     
     // 有未扫描的图片就显示提交扫描按钮
@@ -93,4 +123,3 @@ function formatDocument(document) {
       }
     }
 }
-

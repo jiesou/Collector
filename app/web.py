@@ -76,7 +76,12 @@ def upload_imgs():
 
 @app.route('/api/get_imgs_list')
 def get_imgs_list():
-    return res(app, g.user["imgs"])
+    res_list = g.user["imgs"].copy()
+    if not request.args.get("docments"):
+        for img in res_list:
+            if 'document' in img:
+               del img['document']
+    return res(app, res_list)
 
 lock = threading.Lock()
 # 设置最大线程数为 2
@@ -107,6 +112,7 @@ def scan_imgs():
             img["document_status"] = "scanning"
             print("scan_imgs", threading.enumerate())
     return res(app, g.user["imgs"])
+
 
 @app.route('/api/generate_prompt', methods=['POST'])
 def generate_prompt():
