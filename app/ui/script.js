@@ -123,3 +123,10 @@ function formatDocument(document) {
       }
     }
 }
+
+((send_bt) => {
+  send_bt.on('click', {
+    
+    // TODO apiFetch("/api/generator/send")
+  });
+})($("#generator-prompt-box button"));

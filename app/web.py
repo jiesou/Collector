@@ -1,7 +1,7 @@
 from flask import Flask, send_from_directory, request, g
 from werkzeug.exceptions import HTTPException
 from units import res, parse_body, Users
-from scan import Image2Document
+#from scan import Image2Document
 from answer import AnswersGenerater
 import os, time, threading
 

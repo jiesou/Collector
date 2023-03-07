@@ -36,8 +36,8 @@
             <div class="mdui-card-content">
 
                 <div id="users-imgs-progress" class="mdui-progress">
-                  <div class="mdui-progress-indeterminate"></div>
-                  <div class="mdui-progress-determinate"></div>
+                  <div class="mdui-progress-indeterminate mdui-color-theme-accent"></div>
+                  <div class="mdui-progress-determinate mdui-color-theme-accent"></div>
                 </div>
                 <div id="user-imgs-row" class="mdui-row-xs-2 mdui-row-sm-3 mdui-row-md-4 mdui-row-lg-5 mdui-grid-list">
                 <!-- TEMPLATE user-img -->
@@ -68,12 +68,41 @@
             </div>
             
             
-            <div id="output-card" class="mdui-card">
-
-              <div id="output-text" class="mdui-textfield">
-                <textarea class="mdui-textfield-input" rows="4" placeholder="Prompt"></textarea>
+            <div id="generator-card" class="mdui-card">
+              
+              <ul class="mdui-list">
+                <li class="mdui-list-item">
+                  <div class="mdui-list-item-avatar">
+                    <img src="/img/user.png" class=".mdui-color-theme"/>
+                  </div>
+                  <div class="mdui-list-item-content">
+                    <div class="mdui-list-item-title">User</div>
+                    <div class="mdui-list-item-text">
+                      Hello World
+                    </div>
+                  </div>
+                </li>
+                <li class="mdui-divider-inset mdui-m-y-0"></li>
+                <li class="mdui-list-item">
+                  <div class="mdui-list-item-avatar">
+                    <img src="/img/openai.svg"/>
+                  </div>
+                  <div class="mdui-list-item-content">
+                    <div class="mdui-list-item-title">Generator</div>
+                    <div class="mdui-list-item-text">
+                      Hi
+                    </div>
+                  </div>
+                </li>
+              </ul>
+              <div id="generator-prompt-box" class="mdui-row">
+                <div class="mdui-col mdui-textfield">
+                  <textarea class="mdui-textfield-input" rows="4" placeholder="Prompt"></textarea>
+                </div>
+                <button class="mdui-col mdui-float-right mdui-btn mdui-btn-icon mdui-ripple">
+                  <i class="mdui-icon material-icons">send</i>
+                </button>
               </div>
-
             </div>
 
         </div>

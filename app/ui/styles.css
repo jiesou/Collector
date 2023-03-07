@@ -2,7 +2,7 @@
     position: flex;
 }
 #imgs-card {
-    margin-top: 7vh;
+    margin-top: 3vh;
     padding-top: 2vh;
     padding-bottom: 5vh;
 }
@@ -16,16 +16,29 @@
 #user-imgs-row > img {
     background-image: url(/img/loading.gif); /* 占位图 */
 }
+.mdui-list-item-avatar img {
+    height: 80%;
+    width: 80%;
+    margin: 10%
+}
 
 #scan-imgs-bt {
     margin-top: 1vh;
 }
 
-#output-card {
-    margin-top: 7vh;
+
+
+#generator-card {
+    margin-top: 3vh;
     padding: 2vh;
     padding-top: 0;
-    display: none;
+    /*display: none;*/
+}
+
+#generator-prompt-box {
+    margin-right: 5vw;
+    margin-left: 5vw;
+    margin-top: 0;
 }
 
 .mdui-btn-icon {
