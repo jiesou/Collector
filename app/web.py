@@ -1,8 +1,8 @@
 from flask import Flask, send_from_directory, request, g
 from werkzeug.exceptions import HTTPException
 from units import res, parse_body, Users
-#from scan import Image2Document
-from answer import AnswersGenerater
+from scan import Image2Document
+from answer import AnswersGenerator
 import os, time, threading
 
 app = Flask(__name__)
@@ -125,26 +125,26 @@ def generate_prompt():
         img = body["imgs"][index]
         document += img.get("document")
     
-    prompt = AnswersGenerater.generatePrompt(document)
+    prompt = AnswersGenerator.generatePrompt(document)
     return res(app, {'prompt': prompt})
 
 
-@app.route('/api/generater/send', methods=['POST'])
-def generater_send():
-    # 从 用户数据 的 消息列表 中初始化 AnswersGenerater
-    generater = AnswersGenerater(g.user["messages"])
-    generater.send(request.data.decode())
-    last_message = generater.generate()
+@app.route('/api/generator/send', methods=['POST'])
+def generator_send():
+    # 从 用户数据 的 消息列表 中初始化 AnswersGenerator
+    generator = AnswersGenerator(g.user["messages"])
+    generator.send(request.data.decode())
+    last_message = generator.generate()
     # 获取到 AI 回复后更新 用户数据 中的 消息列表
-    g.user["messages"] = generater.messages
+    g.user["messages"] = generator.messages
     return res(app, last_message)
 
-@app.route('/api/generater/messages')
-def generater_messages():
+@app.route('/api/generator/messages')
+def generator_messages():
     return res(app, g.user["messages"])
 
-@app.route('/api/generater/clean')
-def generater_clean():
+@app.route('/api/generator/clean')
+def generator_clean():
     g.user["messages"] = []
     return res(app, {'message': 'ok'})
 

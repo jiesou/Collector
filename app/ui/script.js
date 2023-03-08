@@ -7,14 +7,15 @@ localStorage.setItem("user-id", USER_ID);
 
 
 async function apiFetch(path, args={}) {
-    args = Object.assign(args, {
+    const defaultArgs = {
         method: 'GET',
         headers: { 'User-Id': USER_ID }
-    });
+    }
+    args = { ...defaultArgs, ...args };
     try {
       let res = await fetch(path, args);
       res = await res.json();
-      if (res.code === 0) return res.data
+      if (res.code === 0) return res.data || []
     } catch (error) {
       console.error("apiFetch", error);
       mdui.snackbar(error.message);
@@ -68,10 +69,10 @@ async function refreshImgsRow(imgs_list) {
   });
 
   // 移除所有非 template 的图片
-  imgs_row.children(':not([class$="-template"])').remove();
+  imgs_row.children(':not([template])').remove();
   let imgs_loaded = 0;
   imgs_list.forEach((img) => {
-    const img_frame = imgs_row.children(".user-img-template").clone().removeClass("user-img-template");
+    const img_frame = imgs_row.children("[template]").clone().removeAttr("template");
     const img_ele = img_frame.find('img');
     img_ele.attr("src", img.url);
     img_ele.on('load', () => {
@@ -124,9 +125,44 @@ function formatDocument(document) {
     }
 }
 
-((send_bt) => {
-  send_bt.on('click', {
+const messages_list = $("#generator-messages-list")
+async function refreshMessages(last_message) {
+    let messages;
+    if (last_message) {
+      messages = [last_message];
+    } else {
+      messages = await apiFetch('/api/generator/messages');
+      messages_list.children(':not([template])').remove();
+    }
     
-    // TODO apiFetch("/api/generator/send")
-  });
-})($("#generator-prompt-box button"));
+    const divider = $('<li>').addClass('mdui-divider-inset mdui-m-y-0');
+    messages.forEach((message) => {
+      let message_template = messages_list.children('[template="generator-message"]').clone().removeAttr('template');
+      if (message.role === 'user') {
+        message_template = messages_list.children('[template="user-message"]').clone().removeAttr('template');
+      }
+      
+      message_template.find('.mdui-list-item-text').text(message.content);
+      messages_list.append(message_template, divider);
+    });
+    // 移除最后一条多余的间隔线
+    messages_list.children(':last-child').remove();
+}
+
+((prompt_box) => {
+  refreshMessages();
+  const send_bt = prompt_box.children('button');
+  const prompt_text = prompt_box.find('.mdui-textfield-input');
+  send_bt.on('click', () => {
+    send_bt.attr('disabled', true);
+    apiFetch("/api/generator/send", {
+      method: 'POST',
+      body: prompt_text.val()
+    }).then((last_message) => {
+      send_bt.removeAttr('disabled');
+      // TODO
+      refreshMessages(last_message);
+    });
+    prompt_text.val('');
+  }); 
+})($("#generator-prompt-box"));

@@ -2,6 +2,7 @@ import openai
 import os
 
 openai.api_key = os.getenv("OPENAI_API_KEY")
+openai.api_key = "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"
 
 def choiceQues(ques):
     text = "{num}. {text}\n".format_map(ques)
@@ -9,7 +10,7 @@ def choiceQues(ques):
         text += "{choice}. {text}\n".format_map(option)
     return text
 
-class AnswersGenerater():
+class AnswersGenerator():
     def __init__(self, messages=[]):
         self.messages = messages
     

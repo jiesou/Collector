@@ -16,6 +16,10 @@
 #user-imgs-row > img {
     background-image: url(/img/loading.gif); /* 占位图 */
 }
+#generator-messages-list .mdui-list-item {
+    /*去除鼠标悬浮时背景压暗*/
+    background: transparent !important;
+}
 .mdui-list-item-avatar img {
     height: 80%;
     width: 80%;
@@ -50,6 +54,6 @@
     height: revert;
 }
 
-[class$="-template"] {
+[template] {
     display: none;
 }
