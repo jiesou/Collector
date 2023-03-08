@@ -17,19 +17,20 @@ class AnswersGenerator():
         self.messages.append({"role": "user", "content": prompt})
     
     def generate(self):
-        completion = openai.ChatCompletion.create(model="gpt-3.5-turbo",
+        completion = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            temperature=0.3,
             messages=self.messages)
         self.messages.append(completion.choices[0].message)
-        return self.messages[-1]
+        return completion.choices[0].message
     
     @staticmethod
     def generatePrompt(document):
         prompt = """目的：生成以下题目的答案
 要求：
-1. 每题的答案都要标出题号
-2. 选择题不要重复选项内容，只需选项答案
-3. 除了答案不要生成任何其它东西，除非我要求你解释答案
-4. 勇于承认自己的错误，不要为错误解释
+1. 除了答案不得生成任何其它东西，除非我要求你解释答案
+2. 每题的答案都要标出题号
+3. 选择题不要重复选项内容，只需填的选项
 
 """
         for block in document:
