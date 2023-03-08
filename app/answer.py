@@ -2,7 +2,6 @@ import openai
 import os
 
 openai.api_key = os.getenv("OPENAI_API_KEY")
-openai.api_key = "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"
 
 def choiceQues(ques):
     text = "{num}. {text}\n".format_map(ques)
