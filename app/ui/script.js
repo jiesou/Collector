@@ -77,17 +77,17 @@ async function refreshImgsRow(imgs_list) {
     img_ele.attr("src", img.url);
     img_ele.on('load', () => {
         imgs_loaded ++;
-        if (imgs_loaded >= imgs_list.length) updateProgress().hide();
+        if (imgs_loaded >= imgs_list.length) updateProgress().parent().hide();
     });
-    // 没图片可加载也隐藏进度条
-    if (imgs_list.length === 0) updateProgress().hide();
     imgs_row.append(img_frame);
-    
+
     // 有未扫描的图片就显示提交扫描按钮
     if (img.document_status === 'unscanned') {
       scan_bt.removeAttr('disabled');
     }
   });
+  // 没图片可加载也隐藏进度条
+  if (imgs_list.length === 0) updateProgress().parent().hide();
 }
 
 ((upload_input, upload_bt) => {
@@ -127,6 +127,7 @@ function formatDocument(document) {
 
 const messages_list = $("#generator-messages-list")
 async function refreshMessages(last_message) {
+    const messages_fragment = [];
     let messages;
     if (last_message) {
       messages = [last_message];
@@ -137,16 +138,18 @@ async function refreshMessages(last_message) {
     
     const divider = $('<li>').addClass('mdui-divider-inset mdui-m-y-0');
     messages.forEach((message) => {
-      let message_template = messages_list.children('[template="generator-message"]').clone().removeAttr('template');
+      let message_ele = messages_list.children('[template="generator-message"]').clone().removeAttr('template');
       if (message.role === 'user') {
-        message_template = messages_list.children('[template="user-message"]').clone().removeAttr('template');
+        message_ele = messages_list.children('[template="user-message"]').clone().removeAttr('template');
       }
       
-      message_template.find('.mdui-list-item-text').text(message.content);
-      messages_list.append(message_template, divider);
+      message_ele.find('.mdui-list-item-text').text(message.content);
+      messages_fragment.push(message_ele, divider.clone());
     });
     // 移除最后一条多余的间隔线
-    messages_list.children(':last-child').remove();
+    messages_fragment.length --;
+    console.log(messages_fragment);
+    messages_list.append(...messages_fragment);
 }
 
 ((prompt_box) => {
