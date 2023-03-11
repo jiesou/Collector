@@ -1,4 +1,4 @@
-from flask import Flask, send_from_directory, request, g
+from flask import Flask, send_from_directory, stream_with_context, request, g
 from werkzeug.exceptions import HTTPException
 from units import res, parse_body, Users
 from scan import Image2Document
@@ -129,21 +129,36 @@ def generate_prompt():
     return res(app, {'prompt': prompt})
 
 
+def GeneratorAnswer(queue, user, prompt):
+    generator = AnswersGenerator(user['messages'])
+    generator.send(prompt)
+    last_message = generator.generate()
+    # 更新 用户数据 中的 消息列表
+    user['messages'] = generator.messages
+    user['messages_status'] = "waiting"
+    queue.put(last_message)
+
 @app.route('/api/generator/send', methods=['POST'])
 def generator_send():
-    # 从 用户数据 的 消息列表 中初始化 AnswersGenerator
-    generator = AnswersGenerator(g.user["messages"])
-    generator.send(request.data.decode())
-    last_message = generator.generate()
-    # 获取到 AI 回复后更新 用户数据 中的 消息列表
-    g.user["messages"] = generator.messages
-    return res(app, last_message)
+    def stream():
+        queue = threading.Queue()
+        generator_thread = threading.Thread(target=GeneratorAnswer,
+          args=(queue, g.user, request.data.decode()),
+          daemon=True)
+        generator_thread.start()
+        g.user["messages_status"] = "thinking"
+        
+        while True:
+            last_message = queue.get()
+            if last_message is None: break
+            return last_message
+    return res(app, stream_with_context(stream()))
 
 @app.route('/api/generator/messages')
 def generator_messages():
     return res(app, g.user["messages"])
 
-@app.route('/api/generator/clean')
+@app.route('/api/generator/clear')
 def generator_clean():
     g.user["messages"] = []
     return res(app, {'message': 'ok'})

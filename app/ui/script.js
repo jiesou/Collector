@@ -128,6 +128,7 @@ function formatDocument(document) {
 const messages_list = $("#generator-messages-list")
 async function refreshMessages(last_message) {
     const messages_fragment = [];
+    const divider = $('<div>').addClass('mdui-divider-inset mdui-m-y-0');
     let messages;
     if (last_message) {
       messages = [last_message];
@@ -136,24 +137,31 @@ async function refreshMessages(last_message) {
       messages_list.children(':not([template])').remove();
     }
     
-    const divider = $('<li>').addClass('mdui-divider-inset mdui-m-y-0');
     messages.forEach((message) => {
       let message_ele = messages_list.children('[template="generator-message"]').clone().removeAttr('template');
       if (message.role === 'user') {
         message_ele = messages_list.children('[template="user-message"]').clone().removeAttr('template');
       }
       
-      message_ele.find('.mdui-list-item-text').text(message.content);
-      messages_fragment.push(message_ele, divider.clone());
+      const text = message.content.replace('\n', '<br>');
+      message_ele.find('.mdui-list-item-text').html(text);
+      messages_fragment.push(divider.clone(), message_ele);
     });
-    // 移除最后一条多余的间隔线
-    messages_fragment.length --;
-    console.log(messages_fragment);
     messages_list.append(...messages_fragment);
+    // 首次加载消息列表，删除第一条多余的 间隔线
+    messages_list.children('div')[0].remove();
 }
 
-((prompt_box) => {
+((clear_bt, prompt_box) => {
   refreshMessages();
+  
+  clear_bt.on('click', () => {
+    clear_bt.attr('disabled', true);
+    apiFetch("/api/generator/clear").then(() => {
+      refreshMessages().then(() => clear_bt.removeAttr('disabled'));
+    });
+  });
+  
   const send_bt = prompt_box.children('button');
   const prompt_text = prompt_box.find('.mdui-textfield-input');
   send_bt.on('click', () => {
@@ -162,10 +170,10 @@ async function refreshMessages(last_message) {
       method: 'POST',
       body: prompt_text.val()
     }).then((last_message) => {
-      send_bt.removeAttr('disabled');
-      // TODO
       refreshMessages(last_message);
+      prompt_text.val('');
+      send_bt.removeAttr('disabled');
     });
-    prompt_text.val('');
+    refreshMessages({'role': 'user', 'content': prompt_text.val()});
   }); 
-})($("#generator-prompt-box"));
+})($('#generator-clear-bt'), $("#generator-prompt-box"));
