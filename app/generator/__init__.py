@@ -1,5 +1,6 @@
 from flask import Blueprint, current_app, stream_with_context, request, g
-import threading
+import threading, queue, json
+from concurrent.futures import ThreadPoolExecutor
 from units import res, parse_body
 from .answer import AnswersGenerator
 
@@ -20,30 +21,33 @@ def generate_prompt():
     return res(current_app, {'prompt': prompt})
 
 
-def GeneratorAnswer(queue, user, prompt):
+def thinking_bgtask(user, prompt):
     generator = AnswersGenerator(user['messages'])
     generator.send(prompt)
-    last_message = generator.generate()
+    for text_snippet in generator.generate():
+        print(text_snippet)
+        yield text_snippet
     # 更新 用户数据 中的 消息列表
     user['messages'] = generator.messages
     user['messages_status'] = "waiting"
-    queue.put(last_message)
+    g.users.save()
+    return
+    #return generator.messages[-1]
+
+executor = ThreadPoolExecutor()
 
 @generator_bp.route('/api/generator/send', methods=['POST'])
 def generator_send():
+    bgtask = executor.submit(thinking_bgtask,
+        g.user, request.data.decode())
+    g.user["messages_status"] = "thinking"
+    
     def stream():
-        queue = threading.Queue()
-        generator_thread = threading.Thread(target=GeneratorAnswer,
-          args=(queue, g.user, request.data.decode()),
-          daemon=True)
-        generator_thread.start()
-        g.user["messages_status"] = "thinking"
-        
-        while True:
-            last_message = queue.get()
-            if last_message is None: break
-            return last_message
-    return res(current_app, stream_with_context(stream()))
+        for result in bgtask.result():
+            #if bgtask.done(): break
+            yield result
+    return stream_with_context(stream())
+
 
 @generator_bp.route('/api/generator/messages')
 def generator_messages():

@@ -1,5 +1,5 @@
 import openai
-import os
+import os, time
 
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
@@ -20,9 +20,23 @@ class AnswersGenerator():
         completion = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
             temperature=0.3,
+            stream=True,
             messages=self.messages)
-        self.messages.append(completion.choices[0].message)
-        return completion.choices[0].message
+        
+        print(completion)
+        text = ""
+        for event in completion:
+            print(event)
+            text_snippet = event.choices[0]['delta'].get('content', '')
+            text += text_snippet
+            yield text_snippet
+        # text = ""
+        # for i in range(7):
+            # time.sleep(1)
+            # text_snippet = f"str{i}"
+            # text += text_snippet
+            # yield text_snippet
+        self.messages.append({"role": "assistant", "content": text})
     
     @staticmethod
     def generatePrompt(document):
