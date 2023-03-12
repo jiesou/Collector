@@ -1,2 +1,3 @@
+import os
 workers = 1
-bind = "0.0.0.0:3000"
+bind = f"0.0.0.0:{os.getenv('PORT', '3000')}"

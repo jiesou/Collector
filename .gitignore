@@ -128,7 +128,7 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-app/data/
+app/data/**
 **.bak
 .paddleocr/
 .cache/

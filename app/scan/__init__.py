@@ -1,7 +1,7 @@
 from flask import Blueprint, current_app, stream_with_context, request, g
 import threading
 from units import res
-from .scan import Images2Docment
+from .scan import Image2Docment
 
 scan_bp = Blueprint('scan', __name__)
 

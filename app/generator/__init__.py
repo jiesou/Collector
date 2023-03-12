@@ -1,5 +1,4 @@
 from flask import Blueprint, current_app, stream_with_context, request, g
-import threading, queue, json
 from concurrent.futures import ThreadPoolExecutor
 from units import res, parse_body
 from .answer import AnswersGenerator
@@ -44,7 +43,6 @@ def generator_send():
     
     def stream():
         for result in bgtask.result():
-            #if bgtask.done(): break
             yield result
     return stream_with_context(stream())
 
