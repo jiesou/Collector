@@ -46,7 +46,7 @@ function updateProgress(percent) {
 }
 
 async function pollProgress(progress_bar) {
-  imgs_list = await new apiFetch("/api/get_imgs_list").send();
+  imgs_list = await new apiFetch("/api/imgs/list").send();
   const finishedImgs = list.filter(img => img.document_status === "scanned");
   const finishedPercent = finishedImgs.length/list.length;
   if (finishedPercent >= 1) {
@@ -59,7 +59,7 @@ async function pollProgress(progress_bar) {
 }
 async function refreshImgsRow(imgs_list) {
   if (!imgs_list) {
-    var imgs_list = await new apiFetch("/api/get_imgs_list").send();
+    var imgs_list = await new apiFetch("/api/imgs/list").send();
   }
   
   const imgs_row = $("#user-imgs-row");
@@ -67,7 +67,7 @@ async function refreshImgsRow(imgs_list) {
   scan_bt.on("click", () => {
       // 先禁用按钮，防止同时提交多个请求
       scan_bt.attr('disabled');
-      new apiFetch("/api/scan_imgs").send().then((res) => {
+      new apiFetch("/api/imgs/scan").send().then((res) => {
           const progress_bar = $("#users-imgs-progress")
             .find(".mdui-progress-determinate");
           progress_bar.css('width', 0);
@@ -114,7 +114,7 @@ upload_bt.on("click", () => upload_input.trigger('click'));
       for (let file of e.target.files) {
         data.append('file', file);
       }
-      new apiFetch("/api/upload_imgs", {
+      new apiFetch("/api/imgs/upload", {
           method: 'POST',
           body: data
       }).send().then((res) => {

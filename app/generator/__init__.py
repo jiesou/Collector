@@ -5,7 +5,7 @@ from .answer import AnswersGenerator
 
 generator_bp = Blueprint('Generator', __name__)
 
-@generator_bp.route('/api/generate_prompt', methods=['POST'])
+@generator_bp.route('/generate_prompt', methods=['POST'])
 def generate_prompt():
     body = parse_body(request)
     body.setdefault("imgs", g.user["imgs"])
@@ -35,7 +35,7 @@ def thinking_bgtask(user, prompt):
 
 executor = ThreadPoolExecutor()
 
-@generator_bp.route('/api/generator/send', methods=['POST'])
+@generator_bp.route('/send', methods=['POST'])
 def generator_send():
     bgtask = executor.submit(thinking_bgtask,
         g.user, request.data.decode())
@@ -48,11 +48,11 @@ def generator_send():
     return stream_with_context(stream())
 
 
-@generator_bp.route('/api/generator/messages')
+@generator_bp.route('/messages')
 def generator_messages():
     return res(current_app, g.user["messages"])
 
-@generator_bp.route('/api/generator/clear')
+@generator_bp.route('/clear')
 def generator_clean():
     g.user["messages"] = []
     return res(current_app, {'message': 'ok'})

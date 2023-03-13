@@ -3,13 +3,13 @@ from werkzeug.exceptions import HTTPException
 import os, time, threading
 from units import res, parse_body, Users
 
-from scan import scan_bp
+from imgs import imgs_bp
 from generator import generator_bp
 
 app = Flask(__name__)
 
-app.register_blueprint(scan_bp)
-app.register_blueprint(generator_bp)
+app.register_blueprint(imgs_bp, url_prefix='/imgs')
+app.register_blueprint(generator_bp, url_prefix='/generator')
 
 app.config['MAX_CONTENT_LENGTH'] = 1024 * 1024 * 30
 # 最大上传大小 30M

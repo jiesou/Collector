@@ -4,9 +4,9 @@ from concurrent.futures import ThreadPoolExecutor
 from units import res
 from .scan import Image2Document
 
-scan_bp = Blueprint('scan', __name__)
+imgs_bp = Blueprint('imgs', __name__)
 
-@scan_bp.route('/api/upload_imgs', methods=['POST'])
+@imgs_bp.route('/upload', methods=['POST'])
 def upload_imgs():
     user_imgs = g.user["imgs"]
     for file in request.files.getlist('file'):
@@ -20,7 +20,7 @@ def upload_imgs():
         file.save(os.path.join(current_app.config['UPLOAD_FOLDER'], filename))
     return res(current_app, user_imgs)
 
-@scan_bp.route('/api/get_imgs_list')
+@imgs_bp.route('/list')
 def get_imgs_list():
     res_list = g.user["imgs"].copy()
     if not request.args.get("docments"):
@@ -45,7 +45,7 @@ def scanning_bgtask(img):
         users.save()
     return json.dumps(result)
 
-@scan_bp.route('/api/scan_imgs')
+@imgs_bp.route('/scan')
 def scan_imgs():
     tasks = []
     for img in g.user["imgs"]:
@@ -53,7 +53,7 @@ def scan_imgs():
         img["document_status"] = "scanning"
     
     def stream():
-        yield "start"
+        yield ""
         for task in tasks:
             yield task.result()
     return stream_with_context(stream())
