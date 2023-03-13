@@ -32,30 +32,29 @@ def get_imgs_list():
 executor = ThreadPoolExecutor(max_workers=2)
 lock = threading.Lock()
 
-def scanning_bgtask(img):
-    doc = img.get("document")
-    if doc is not None: return doc
-    
-    # 连接 "data" 将URL的根目录转为文件系统相对路径
-    result = Image2Document('data' + img["url"])
-    # 在锁中进行用户数据、文件系统操作
-    with lock:
-        img["document"] = result
-        img["document_status"] = "scanned"
-        users.save()
-    return json.dumps(result)
+def scanning_bgtask():
+    for img in g.user["imgs"]:
+        result = img.get("document")
+        if result is None:
+            print('data' + img["url"])
+            # 连接 "data" 将URL的根目录转为文件系统相对路径
+            result = Image2Document('data' + img["url"])
+            img["document"] = result
+            img["document_status"] = "scanned"
+        # 在锁中进行用户数据、文件系统操作
+        with lock:
+            g.users.save()
+            print('saved')
+        yield json.dumps(result)
 
 @imgs_bp.route('/scan')
 def scan_imgs():
-    tasks = []
-    for img in g.user["imgs"]:
-        tasks.append(executor.submit(scanning_bgtask, img))
-        img["document_status"] = "scanning"
+    bgtask = executor.submit(scanning_bgtask)
     
     def stream():
-        yield ""
-        for task in tasks:
-            yield task.result()
+        yield "start"
+        for docment in bgtask.result():
+            yield f"{docment}\n"
     return stream_with_context(stream())
 
 

@@ -1,4 +1,5 @@
 from flask import Blueprint, current_app, stream_with_context, request, g
+import threading
 from concurrent.futures import ThreadPoolExecutor
 from units import res, parse_body
 from .answer import AnswersGenerator
@@ -19,21 +20,19 @@ def generate_prompt():
     prompt = AnswersGenerator.generatePrompt(document)
     return res(current_app, {'prompt': prompt})
 
+executor = ThreadPoolExecutor(max_workers=2)
+lock = threading.Lock()
 
 def thinking_bgtask(user, prompt):
     generator = AnswersGenerator(user['messages'])
     generator.send(prompt)
     for text_snippet in generator.generate():
-        print(text_snippet)
         yield text_snippet
-    # 更新 用户数据 中的 消息列表
-    user['messages'] = generator.messages
-    user['messages_status'] = "waiting"
-    g.users.save()
-    return
-    #return generator.messages[-1]
-
-executor = ThreadPoolExecutor()
+    with lock:
+        # 更新 用户数据 中的 消息列表
+        user['messages'] = generator.messages
+        user['messages_status'] = "waiting"
+        g.users.save()
 
 @generator_bp.route('/send', methods=['POST'])
 def generator_send():

@@ -1,13 +1,10 @@
-import logging
+from paddleocr import PaddleOCR
+from PIL import Image, ImageDraw, ExifTags
+import re, sys, logging
 logging.basicConfig(level=logging.DEBUG,
     format='collector::%(asctime)s.%(msecs)03d-%(levelname)s-%(message)s',
     datefmt='%H:%M:%S')
-logging.info("初始化...")
-
-from paddleocr import PaddleOCR
-from PIL import Image, ImageDraw, ExifTags
-import re, sys
-
+logging.info("Scan Module 初始化完成！")
 
 def getNextLine(from_lines):
     width, height = img.size
