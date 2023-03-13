@@ -1,13 +1,14 @@
 from flask import Blueprint, current_app, stream_with_context, request, g
-import threading
+import os, threading, json
+from concurrent.futures import ThreadPoolExecutor
 from units import res
-from .scan import Image2Docment
+from .scan import Image2Document
 
 scan_bp = Blueprint('scan', __name__)
 
 @scan_bp.route('/api/upload_imgs', methods=['POST'])
 def upload_imgs():
-    user_imgs = users[g.user_id]["imgs"]
+    user_imgs = g.user["imgs"]
     for file in request.files.getlist('file'):
         name, ext = os.path.splitext(file.filename)
         filename = '{}-{}{}'.format(g.user_id, str(len(user_imgs) + 1), ext)
@@ -28,12 +29,13 @@ def get_imgs_list():
                del img['document']
     return res(current_app, res_list)
 
+executor = ThreadPoolExecutor(max_workers=2)
 lock = threading.Lock()
-# 设置最大线程数为 2
-semaphore = threading.BoundedSemaphore(2)
 
-def ScanImgAndSave(img):
-    semaphore.acquire()
+def scanning_bgtask(img):
+    doc = img.get("document")
+    if doc is not None: return doc
+    
     # 连接 "data" 将URL的根目录转为文件系统相对路径
     result = Image2Document('data' + img["url"])
     # 在锁中进行用户数据、文件系统操作
@@ -41,21 +43,19 @@ def ScanImgAndSave(img):
         img["document"] = result
         img["document_status"] = "scanned"
         users.save()
-        print(img["url"], "saved")
-        pass
-    semaphore.release()
+    return json.dumps(result)
 
 @scan_bp.route('/api/scan_imgs')
 def scan_imgs():
+    tasks = []
     for img in g.user["imgs"]:
-        doc = img.get("document")
-        if doc is None:
-            document_thread = threading.Thread(target=ScanImgAndSave,
-                args=(img,),
-                daemon=True)
-            document_thread.start()
-            img["document_status"] = "scanning"
-            print("scan_imgs", threading.enumerate())
-    return res(current_app, g.user["imgs"])
+        tasks.append(executor.submit(scanning_bgtask, img))
+        img["document_status"] = "scanning"
+    
+    def stream():
+        yield "start"
+        for task in tasks:
+            yield task.result()
+    return stream_with_context(stream())
 
 

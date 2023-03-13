@@ -42,6 +42,7 @@ def generator_send():
     g.user["messages_status"] = "thinking"
     
     def stream():
+        yield ""
         for result in bgtask.result():
             yield result
     return stream_with_context(stream())
