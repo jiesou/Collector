@@ -8,16 +8,19 @@ generator_bp = Blueprint('Generator', __name__)
 
 @generator_bp.route('/generate_prompt', methods=['POST'])
 def generate_prompt():
-    body = parse_body(request)
+    body = parse_body(request, {})
     body.setdefault("imgs", g.user["imgs"])
     # 未指定需要处理的页数就遍历全部图片
-    body.setdefault("indexs", range(len(body["imgs"])))
-    document = []
+    body.setdefault("indexs", list(range(len(body["imgs"]))))
+    print(body)
+    full_document = []
     for index in body["indexs"]:
         img = body["imgs"][index]
-        document += img.get("document")
+        print(img)
+        full_document += img.get("document", [])
     
-    prompt = AnswersGenerator.generatePrompt(document)
+    prompt = AnswersGenerator.generatePrompt(full_document)
+    print(full_document)
     return res(current_app, {'prompt': prompt})
 
 executor = ThreadPoolExecutor(max_workers=2)

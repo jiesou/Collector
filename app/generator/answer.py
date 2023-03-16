@@ -26,7 +26,6 @@ class AnswersGenerator():
         print(completion)
         text = ""
         for event in completion:
-            print(event)
             text_snippet = event.choices[0]['delta'].get('content', '')
             text += text_snippet
             yield text_snippet

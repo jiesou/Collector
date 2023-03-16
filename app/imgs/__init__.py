@@ -11,7 +11,7 @@ def upload_imgs():
     user_imgs = g.user["imgs"]
     for file in request.files.getlist('file'):
         name, ext = os.path.splitext(file.filename)
-        filename = '{}-{}{}'.format(g.user_id, str(len(user_imgs) + 1), ext)
+        filename = f'{g.user_id}-{len(user_imgs)}{ext}'
         
         user_imgs.append({
             "url": "/user-upload/" + filename,
@@ -27,6 +27,7 @@ def get_imgs_list():
         for img in res_list:
             if 'document' in img:
                del img['document']
+    print(g.user["imgs"])
     return res(current_app, res_list)
 
 executor = ThreadPoolExecutor(max_workers=2)
@@ -39,12 +40,14 @@ def scanning_bgtask():
             print('data' + img["url"])
             # 连接 "data" 将URL的根目录转为文件系统相对路径
             result = Image2Document('data' + img["url"])
+            
             img["document"] = result
+            print(img)
             img["document_status"] = "scanned"
-        # 在锁中进行用户数据、文件系统操作
-        with lock:
-            g.users.save()
-            print('saved')
+            # 在锁中进行用户数据、文件系统操作
+            with lock:
+                g.users.save()
+                print('saved')
         yield json.dumps(result)
 
 @imgs_bp.route('/scan')
@@ -52,9 +55,9 @@ def scan_imgs():
     bgtask = executor.submit(scanning_bgtask)
     
     def stream():
-        yield "start"
-        for docment in bgtask.result():
-            yield f"{docment}\n"
+        yield ""
+        for document in bgtask.result():
+            yield f"{document}\n"
     return stream_with_context(stream())
 
 

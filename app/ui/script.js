@@ -32,10 +32,16 @@ class apiFetch {
   }
 }
 
+/*
+percent >= 1 hide all
+percent 0~1 determinate
+percent none indeterminate
+*/
 function updateProgress(percent) {
   let progress_bar = $("#users-imgs-progress");
   progress_bar.show();
   if (percent) {
+    if (percent >= 1) progress_bar.hide();
     progress_bar = progress_bar.find('.mdui-progress-determinate');
   } else {
     progress_bar = progress_bar.find('.mdui-progress-indeterminate');
@@ -45,18 +51,18 @@ function updateProgress(percent) {
   return progress_bar
 }
 
-async function pollProgress(progress_bar) {
-  imgs_list = await new apiFetch("/api/imgs/list").send();
-  const finishedImgs = list.filter(img => img.document_status === "scanned");
-  const finishedPercent = finishedImgs.length/list.length;
-  if (finishedPercent >= 1) {
-    progress_bar.hide();
-    clearInterval(pollProgress);
-  }
-  updateProgress(finishedPercent);
-  // 十秒一次轮询
-  setTimeout(pollProgress, 10000);
-}
+// async function pollProgress(progress_bar) {
+  // imgs_list = await new apiFetch("/api/imgs/list").send();
+  // const finishedImgs = list.filter(img => img.document_status === "scanned");
+  // const finishedPercent = finishedImgs.length/list.length;
+  // if (finishedPercent >= 1) {
+    // updateProgress(1);
+    // clearInterval(pollProgress);
+  // }
+  // updateProgress(finishedPercent);
+  // // 十秒一次轮询
+  // setTimeout(pollProgress, 10000);
+// }
 async function refreshImgsRow(imgs_list) {
   if (!imgs_list) {
     var imgs_list = await new apiFetch("/api/imgs/list").send();
@@ -67,20 +73,30 @@ async function refreshImgsRow(imgs_list) {
   scan_bt.on("click", () => {
       // 先禁用按钮，防止同时提交多个请求
       scan_bt.attr('disabled');
-      new apiFetch("/api/imgs/scan").send().then((res) => {
-          const progress_bar = $("#users-imgs-progress")
-            .find(".mdui-progress-determinate");
-          progress_bar.css('width', 0);
-          progress_bar.show();
-          mdui.snackbar("已提交请求");
+      const req = new apiFetch("/api/imgs/scan");
+      fetch(req.path, req.args).then((res) => {
+          updateProgress(0);
+          mdui.snackbar("已提交请求，可关闭浏览器");
           
-          pollProgress(progress_bar);
+          const reader = res.body.getReader();
+          const finshedImgs = [];
+          reader.read().then(function updateScanProgress({ done, value }) {
+            if (done) {
+              updateProgress(1);
+              mdui.snackbar("全部扫描完成");
+              return;
+            }
+            finshedImgs.push(JSON.parse(new TextDecoder().decode(value)));
+            updateProgress(finshedImgs.length/imgs_list.length);
+            return reader.read().then(updateScanProgress);
+          });
       });
   });
 
-  // 移除所有非 template 的图片
+  // 移除所有非 template 的图片，以便刷新
   imgs_row.children(':not([template])').remove();
   let imgs_loaded = 0;
+  let imgs_scanned = 0;
   imgs_list.forEach((img) => {
     const img_frame = imgs_row.children("[template]").clone().removeAttr("template");
     const img_ele = img_frame.find('img');
@@ -91,13 +107,18 @@ async function refreshImgsRow(imgs_list) {
     });
     imgs_row.append(img_frame);
 
-    // 有未扫描的图片就显示提交扫描按钮
-    if (img.document_status === 'unscanned') {
-      scan_bt.removeAttr('disabled');
-    }
+    if (img.document_status === 'scanned') imgs_scanned ++;
   });
+  
+  if (imgs_scanned >= imgs_list.length) {
+      // 全部扫描过就启用 生成答案 按钮
+      $("#output-imgs-bt").removeAttr("disabled");
+  } else {
+      // 有任意一张图片未扫描就允许再次扫描
+      scan_bt.removeAttr('disabled');
+  }
   // 没图片可加载也隐藏进度条
-  if (imgs_list.length === 0) updateProgress().parent().hide();
+  if (imgs_list.length === 0) updateProgress(1);
 }
 
 ((upload_input, upload_bt) => {
@@ -123,17 +144,46 @@ upload_bt.on("click", () => upload_input.trigger('click'));
   });
 })($("#upload-img-input"), $("#upload-img-bt"));
 
-function formatDocument(document) {
-    let text = ""
-    for (let element of result) {
-      if (element.type === "choice_ques") {
-          text += `${element["num"]}. ${element["text"]}`;
-          for (let option of element["options"]) {
-            text += `-- ${option["choice"]}. ${option["text"]}`;
+// function formatDocument(document) {
+    // let text = ""
+    // for (let element of result) {
+      // if (element.type === "choice_ques") {
+          // text += `${element["num"]}. ${element["text"]}`;
+          // for (let option of element["options"]) {
+            // text += `-- ${option["choice"]}. ${option["text"]}`;
+          // }
+      // }
+    // }
+// }
+
+
+((output_imgs_bt) => {
+  output_imgs_bt.on("click", () => {
+      output_imgs_bt.attr("disabled");
+      new apiFetch("/api/generator/generate_prompt", {
+          "method": "POST"
+      }).send().then((res) => {
+          output_imgs_bt.removeAttr("disabled");
+          if (res.prompt) {
+            const prompt_box = $("#generator-prompt-box");
+            prompt_box.find(".mdui-textfield-input").val(res.prompt);
+            prompt_box.find("button").trigger("click");
           }
-      }
-    }
-}
+          // const full_docment = [];
+          // imgs.forEach((img) => {
+              // if (img.docment_status === "scanned") {
+                // full_docment.push(img.docment);
+              // }
+              // const prompt = formatDocument(full_docment);
+              // const prompt_box = $("#generator-prompt-box");
+              // prompt_box.find(".mdui-textfield-input").val(prompt);
+              // prompt_box.find("button").trigger("click");
+          // })
+      });
+  });
+})($("#output-imgs-bt"));
+
+
 
 const messages_list = $("#generator-messages-list")
 async function refreshMessages(last_message) {
@@ -147,7 +197,7 @@ async function refreshMessages(last_message) {
       messages_list.children(':not([template])').remove();
     }
     
-    let message_ele
+    let message_ele;
     messages.forEach((message) => {
       message_ele = messages_list.children('[template="generator-message"]').clone().removeAttr('template');
       if (message.role === 'user') {
@@ -165,7 +215,8 @@ async function refreshMessages(last_message) {
 ((clear_bt, prompt_box) => {
   refreshMessages().then(() => {
     // 首次加载消息列表，删除第一条多余的 间隔线
-    messages_list.children('div')[0].remove();
+    const ele = messages_list.children('div')[0]
+    if (ele) ele.remove();
   });
   
   clear_bt.on('click', () => {
@@ -190,11 +241,11 @@ async function refreshMessages(last_message) {
 
       reader.read().then(function appendAnswer({ done, value }) {
         if (done) {
-          prompt_text.val('');
           send_bt.removeAttr('disabled');
           return;
         }
         text_ele.append(new TextDecoder().decode(value));
+        prompt_text.val('');
 
         return reader.read().then(appendAnswer);
       });
