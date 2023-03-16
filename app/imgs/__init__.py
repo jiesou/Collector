@@ -1,5 +1,5 @@
 from flask import Blueprint, current_app, stream_with_context, request, g
-import os, threading, json
+import os, threading, json, copy
 from concurrent.futures import ThreadPoolExecutor
 from units import res
 from .scan import Image2Document
@@ -22,12 +22,12 @@ def upload_imgs():
 
 @imgs_bp.route('/list')
 def get_imgs_list():
-    res_list = g.user["imgs"].copy()
+    res_list = g.user["imgs"]
     if not request.args.get("docments"):
+        res_list = copy.deepcopy(res_list)
         for img in res_list:
             if 'document' in img:
                del img['document']
-    print(g.user["imgs"])
     return res(current_app, res_list)
 
 executor = ThreadPoolExecutor(max_workers=2)
