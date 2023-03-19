@@ -30,6 +30,11 @@ def get_imgs_list():
                del img['document']
     return res(current_app, res_list)
 
+@imgs_bp.route('/delete/<int:index>')
+def delete_img(index):
+    del g.user["imgs"][index]
+    return get_imgs_list()
+
 executor = ThreadPoolExecutor(max_workers=2)
 lock = threading.Lock()
 
