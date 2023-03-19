@@ -81,9 +81,6 @@
               <ul id="generator-messages-list" class="mdui-list">
                 <!-- TEMPLATE user-message -->
                 <li class="mdui-list-item" template="user-message">
-                  <div class="mdui-list-item-avatar">
-                    <img src="/img/user.png" class=".mdui-color-theme"/>
-                  </div>
                   <div class="mdui-list-item-content">
                     <div class="mdui-list-item-title">User</div>
                     <div class="mdui-list-item-text"></div>
@@ -91,9 +88,6 @@
                 </li>
                 <!-- TEMPLATE generator-message -->
                 <li class="mdui-list-item" template="generator-message">
-                  <div class="mdui-list-item-avatar">
-                    <img src="/img/openai.svg"/>
-                  </div>
                   <div class="mdui-list-item-content">
                     <div class="mdui-list-item-title">Generator</div>
                     <div class="mdui-list-item-text"></div>
@@ -117,6 +111,7 @@
         <script>
             let jQuery = mdui.$;
         </script>
+        <script src="https://cdn.staticfile.org/marked/4.2.12/marked.min.js"></script>
 
         <script src="script.js"></script>
         <noscript class="mdui-typo-headline-opacity"> This application requires JavaScript </noscript>
