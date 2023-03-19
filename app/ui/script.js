@@ -5,6 +5,9 @@ const USER_ID = localStorage.getItem("user-id") ||
         new Date().getTime().toString(32).slice(-4);
 localStorage.setItem("user-id", USER_ID);
 
+marked.setOptions({
+  breaks: true
+});
 
 class apiFetch {
   constructor(path, args={}) {
@@ -51,8 +54,39 @@ function updateProgress(percent) {
   return progress_bar
 }
 
-
-
+function editImgEle(img_frame, img, index) {
+  img_frame.find(".mdui-grid-tile-title").text(index + 1);
+  
+  const icon = $("<i>").addClass("mdui-icon material-icons");
+  const status_fragment = [];
+  if (img.document_status === "scanned") {
+    icon.text("check");
+    status_fragment.push(icon, "已识别");
+  } else if (img.document_status === "unscanned") {
+    icon.text("info_outline");
+    status_fragment.push(icon, "未识别");
+  } else if (img.document_status === "scanning") {
+    icon.text("wifi_tethering");
+    status_fragment.push(icon, "识别中");
+  }
+  img_frame.find(".mdui-grid-tile-subtitle").append(...status_fragment);
+  
+  img_frame.find("button").on("click", (e) => {
+    const delete_bt = $(e.target);
+    mdui.snackbar({
+      message: "确定删除？",
+      buttonText: "确定",
+      onButtonClick: () => {
+          delete_bt.attr("disabled");
+          new apiFetch(`/api/imgs/delete/${index}`).send().then(() => {
+            delete_bt.closest("div.mdui-col").remove();
+            refreshImgsRow();
+          });
+      }
+    });
+  });
+  
+}
 
 async function refreshImgsRow(imgs_list) {
   if (!imgs_list) {
@@ -60,32 +94,6 @@ async function refreshImgsRow(imgs_list) {
   }
   
   const imgs_row = $("#user-imgs-row");
-  const scan_bt = $("#scan-imgs-bt");
-  scan_bt.on("click", () => {
-      // 先禁用按钮，防止同时提交多个请求
-      scan_bt.attr('disabled');
-      const req = new apiFetch("/api/imgs/scan");
-      fetch(req.path, req.args).then((res) => {
-        updateProgress(0);
-        mdui.snackbar("已提交请求，可关闭浏览器");
-        
-        const reader = res.body.getReader();
-        const finshedImgs = [];
-        reader.read().then(function updateScanProgress({ done, value }) {
-          if (done) {
-            updateProgress(1);
-            mdui.snackbar("全部扫描完成");
-            refreshImgsRow().then(() => {
-              $("#output-imgs-bt").removeAttr("disabled");
-            });
-            return;
-          }
-          finshedImgs.push(JSON.parse(new TextDecoder().decode(value)));
-          updateProgress(finshedImgs.length/imgs_list.length);
-          return reader.read().then(updateScanProgress);
-        });
-      });
-  });
 
   // 移除所有非 template 的图片，以便刷新
   imgs_row.children(':not([template])').remove();
@@ -93,64 +101,35 @@ async function refreshImgsRow(imgs_list) {
   let imgs_scanned = 0;
   imgs_list.forEach((img, index) => {
     const img_frame = imgs_row.children("[template]").clone().removeAttr("template");
-    img_frame.find(".mdui-grid-tile-title").text(index + 1);
-    
-    const icon = $("<i>").addClass("mdui-icon material-icons");
-    const status_fragment = [];
-    if (img.document_status === "scanned") {
-      icon.text("check");
-      status_fragment.push(icon, "已识别");
-    } else if (img.document_status === "unscanned") {
-      icon.text("info_outline");
-      status_fragment.push(icon, "未识别");
-    } else if (img.document_status === "scanning") {
-      icon.text("wifi_tethering");
-      status_fragment.push(icon, "识别中");
-    }
-    img_frame.find(".mdui-grid-tile-subtitle").append(...status_fragment);
-    
-    img_frame.find("button").on("click", (e) => {
-      const delete_bt = $(e.target);
-      mdui.snackbar({
-        message: "确定删除？",
-        buttonText: "确定",
-        onButtonClick: () => {
-            delete_bt.attr("disabled");
-            new apiFetch(`/api/imgs/delete/${index}`).send().then(() => {
-              delete_bt.closest("div.mdui-col").remove();
-              refreshImgsRow();
-            });
-        }
-      });
-    });
-    
+    editImgEle(img_frame, img, index);
+
     const img_ele = img_frame.find('img');
     img_ele.attr("src", img.url);
     img_ele.on("load", () => {
         imgs_loaded ++;
-        if (imgs_loaded >= imgs_list.length) updateProgress().parent().hide();
+        if (imgs_loaded >= imgs_list.length) updateProgress(1);
     });
     imgs_row.append(img_frame);
 
     if (img.document_status === 'scanned') imgs_scanned ++;
   });
   
-  // 没图片可扫描就隐藏进度条，不显示按钮
+  // 没图片可加载就隐藏进度条（正常需要图片加载完成才能隐藏进度条）
   if (imgs_list.length === 0) {
     updateProgress(1);
   } else if (imgs_scanned >= imgs_list.length) {
-      // 全部扫描过就启用 生成答案 按钮
-      $("#output-imgs-bt").removeAttr("disabled");
-  } else {
-      // 有任意一张图片未扫描就允许再次扫描
-      scan_bt.removeAttr('disabled');
+    // 全部扫描过就启用 生成答案 按钮
+    $("#output-imgs-bt").removeAttr("disabled");
+  } else if (imgs_list.findIndex((img) => img.document_status === "unscanned") >= 0) {
+    // 有任意一张图片未扫描就允许再次扫描
+    $("#scan-imgs-bt").removeAttr('disabled');
   }
 }
 
+/* 初始化 imgs-row，同时激活上传图片功能 */
 refreshImgsRow().then(() => {
   const upload_input = $("#upload-img-input");
   upload_input.on("change", (e) => {
-      upload_bt.attr('disabled', true)
       const data = new FormData();
       for (let file of e.target.files) {
         data.append('file', file);
@@ -159,7 +138,7 @@ refreshImgsRow().then(() => {
           method: 'POST',
           body: data
       }).send().then((res) => {
-          refreshImgsRow(res).then(()=>upload_bt.removeAttr('disabled'));
+          refreshImgsRow(res);
       });
   });
   
@@ -169,6 +148,35 @@ refreshImgsRow().then(() => {
     upload_input.trigger('click');
   });
   upload_bt.removeAttr('disabled');
+});
+
+$("#scan-imgs-bt").on("click", (e) => {
+    $(e.target).attr('disabled');
+    const user_imgs = $("#user-imgs-row > .mdui-col");
+    const req = new apiFetch("/api/imgs/scan");
+    fetch(req.path, req.args).then((res) => {
+      updateProgress(0);
+      mdui.snackbar("已提交请求，可关闭浏览器");
+      
+      const reader = res.body.getReader();
+      const finshedImgs = [];
+      reader.read().then(function updateScanProgress({ done, value }) {
+        if (done) {
+          updateProgress(1);
+          mdui.snackbar("全部扫描完成");
+          refreshImgsRow().then(() => {
+            $("#output-imgs-bt").removeAttr("disabled");
+          });
+          return;
+        }
+        const lastestImg = JSON.parse(new TextDecoder().decode(value));
+        finshedImgs.push(lastestImg);
+
+        user_imgs.index(lastestImg.index)
+        updateProgress(finshedImgs.length/imgs_list.length);
+        return reader.read().then(updateScanProgress);
+      });
+    });
 });
 
 $("#output-imgs-bt").on("click", (e) => {
@@ -208,16 +216,16 @@ async function refreshMessages(last_message) {
     
     const messageHtml = marked.parse(message.content);
     message_ele.find('.mdui-list-item-text').html(messageHtml);
-    messages_fragment.push(divider.clone(), message_ele);
+    if (messages_list.children("li:not([template])").length > 0) {
+      messages_fragment.push(divider.clone());
+    }
+    messages_fragment.push(message_ele);
   });
   messages_list.append(...messages_fragment);
-  return message_ele
+  return message_ele;
 }
 
 refreshMessages().then(() => {
-  // 首次加载消息列表，删除第一条多余的 间隔线
-  $("#generator-messages-list > div").first().remove();
-  
   const clear_bt = $('#generator-clear-bt');
   clear_bt.on('click', (e) => {
     clear_bt.attr('disabled', true);

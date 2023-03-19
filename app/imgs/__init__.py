@@ -2,7 +2,7 @@ from flask import Blueprint, current_app, stream_with_context, request, g
 import os, threading, json, copy
 from concurrent.futures import ThreadPoolExecutor
 from units import res
-from .scan import Image2Document
+from .scan_plaintext import Image2Document
 
 imgs_bp = Blueprint('imgs', __name__)
 
@@ -26,8 +26,8 @@ def get_imgs_list():
     if not request.args.get("documents"):
         res_list = copy.deepcopy(res_list)
         for img in res_list:
-            if 'document' in img:
-               del img['document']
+            if 'document_text' in img:
+               del img['document_text']
     return res(current_app, res_list)
 
 @imgs_bp.route('/delete/<int:index>')
@@ -45,11 +45,12 @@ lock = threading.Lock()
 
 def scanning_bgtask():
     for img in g.user["imgs"]:
-        result = img.get("document")
+        result = img.get("document_text")
         if result is None:
             result = Image2Document('data' + img["url"])
             
-            img["document"] = result
+            # img["document"] = result
+            img["document_text"] = result
             img["document_status"] = "scanned"
             # 在锁中进行用户数据、文件系统操作
             with lock:
