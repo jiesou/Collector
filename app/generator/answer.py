@@ -29,12 +29,6 @@ class AnswersGenerator():
             text_snippet = event.choices[0]['delta'].get('content', '')
             text += text_snippet
             yield text_snippet
-        # text = ""
-        # for i in range(7):
-            # time.sleep(1)
-            # text_snippet = f"str{i}"
-            # text += text_snippet
-            # yield text_snippet
         self.messages.append({"role": "assistant", "content": text})
     
     @staticmethod
@@ -46,9 +40,11 @@ class AnswersGenerator():
 3. 选择题不要重复选项内容，只需填的选项
 
 """
-        for block in document:
-            if block["type"] == "choice_ques":
-                prompt += choiceQues(block) + '\n'
-        # 切片清除最后一个换号
-        return prompt[:-1]
+        # for block in document:
+            # if block["type"] == "choice_ques":
+                # prompt += choiceQues(block) + '\n'
+        # # 切片清除最后一个换号
+        # return prompt[:-1]
+        prompt += document
+        return prompt
     

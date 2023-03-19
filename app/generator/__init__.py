@@ -12,15 +12,12 @@ def generate_prompt():
     body.setdefault("imgs", g.user["imgs"])
     # 未指定需要处理的页数就遍历全部图片
     body.setdefault("indexs", list(range(len(body["imgs"]))))
-    print(body)
-    full_document = []
+    full_document = ""
     for index in body["indexs"]:
         img = body["imgs"][index]
-        print(img)
-        full_document += img.get("document", [])
+        full_document += img.get("document_text", "")
     
     prompt = AnswersGenerator.generatePrompt(full_document)
-    print(full_document)
     return res(current_app, {'prompt': prompt})
 
 executor = ThreadPoolExecutor(max_workers=2)
