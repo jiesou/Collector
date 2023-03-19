@@ -90,6 +90,22 @@ async function refreshImgsRow(imgs_list) {
   let imgs_scanned = 0;
   imgs_list.forEach((img, index) => {
     const img_frame = imgs_row.children("[template]").clone().removeAttr("template");
+    img_frame.find(".mdui-grid-tile-title").text(index + 1);
+    
+    const icon = $("<i>").addClass("mdui-icon material-icons");
+    const status_fragment = [];
+    if (img.document_status === "scanned") {
+      icon.text("check");
+      status_fragment.push(icon, "已识别");
+    } else if (img.document_status === "unscanned") {
+      icon.text("info_outline");
+      status_fragment.push(icon, "未识别");
+    } else if (img.document_status === "scanning") {
+      icon.text("wifi_tethering");
+      status_fragment.push(icon, "识别中");
+    }
+    img_frame.find(".mdui-grid-tile-subtitle").append(...status_fragment);
+    
     img_frame.find("button").on("click", (e) => {
       const delete_bt = $(e.target);
       mdui.snackbar({
