@@ -66,21 +66,21 @@ async function refreshImgsRow(imgs_list) {
       scan_bt.attr('disabled');
       const req = new apiFetch("/api/imgs/scan");
       fetch(req.path, req.args).then((res) => {
-          updateProgress(0);
-          mdui.snackbar("已提交请求，可关闭浏览器");
-          
-          const reader = res.body.getReader();
-          const finshedImgs = [];
-          reader.read().then(function updateScanProgress({ done, value }) {
-            if (done) {
-              updateProgress(1);
-              mdui.snackbar("全部扫描完成");
-              return;
-            }
-            finshedImgs.push(JSON.parse(new TextDecoder().decode(value)));
-            updateProgress(finshedImgs.length/imgs_list.length);
-            return reader.read().then(updateScanProgress);
-          });
+        updateProgress(0);
+        mdui.snackbar("已提交请求，可关闭浏览器");
+        
+        const reader = res.body.getReader();
+        const finshedImgs = [];
+        reader.read().then(function updateScanProgress({ done, value }) {
+          if (done) {
+            updateProgress(1);
+            mdui.snackbar("全部扫描完成");
+            return;
+          }
+          finshedImgs.push(JSON.parse(new TextDecoder().decode(value)));
+          updateProgress(finshedImgs.length/imgs_list.length);
+          return reader.read().then(updateScanProgress);
+        });
       });
   });
 
@@ -88,11 +88,26 @@ async function refreshImgsRow(imgs_list) {
   imgs_row.children(':not([template])').remove();
   let imgs_loaded = 0;
   let imgs_scanned = 0;
-  imgs_list.forEach((img) => {
+  imgs_list.forEach((img, index) => {
     const img_frame = imgs_row.children("[template]").clone().removeAttr("template");
+    img_frame.find("button").on("click", (e) => {
+      const delete_bt = $(e.target);
+      mdui.snackbar({
+        message: "确定删除？",
+        buttonText: "确定",
+        onButtonClick: () => {
+            delete_bt.attr("disabled");
+            new apiFetch(`/api/imgs/delete/${index}`).send().then(() => {
+              delete_bt.closest("div.mdui-col").remove();
+              refreshImgsRow();
+            });
+        }
+      });
+    });
+    
     const img_ele = img_frame.find('img');
     img_ele.attr("src", img.url);
-    img_ele.on('load', () => {
+    img_ele.on("load", () => {
         imgs_loaded ++;
         if (imgs_loaded >= imgs_list.length) updateProgress().parent().hide();
     });

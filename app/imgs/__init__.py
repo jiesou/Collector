@@ -23,7 +23,7 @@ def upload_imgs():
 @imgs_bp.route('/list')
 def get_imgs_list():
     res_list = g.user["imgs"]
-    if not request.args.get("docments"):
+    if not request.args.get("documents"):
         res_list = copy.deepcopy(res_list)
         for img in res_list:
             if 'document' in img:
@@ -32,7 +32,12 @@ def get_imgs_list():
 
 @imgs_bp.route('/delete/<int:index>')
 def delete_img(index):
-    del g.user["imgs"][index]
+    if index < len(g.user["imgs"]):
+        try:
+          # 连接 "data" 将URL的根目录转为文件系统相对路径
+          os.remove('data' + g.user["imgs"][index]["url"])
+        except: pass
+        g.user["imgs"].pop(index)
     return get_imgs_list()
 
 executor = ThreadPoolExecutor(max_workers=2)
@@ -42,17 +47,13 @@ def scanning_bgtask():
     for img in g.user["imgs"]:
         result = img.get("document")
         if result is None:
-            print('data' + img["url"])
-            # 连接 "data" 将URL的根目录转为文件系统相对路径
             result = Image2Document('data' + img["url"])
             
             img["document"] = result
-            print(img)
             img["document_status"] = "scanned"
             # 在锁中进行用户数据、文件系统操作
             with lock:
                 g.users.save()
-                print('saved')
         yield json.dumps(result)
 
 @imgs_bp.route('/scan')
