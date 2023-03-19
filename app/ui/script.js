@@ -75,6 +75,9 @@ async function refreshImgsRow(imgs_list) {
           if (done) {
             updateProgress(1);
             mdui.snackbar("全部扫描完成");
+            refreshImgsRow().then(() => {
+              $("#output-imgs-bt").removeAttr("disabled");
+            });
             return;
           }
           finshedImgs.push(JSON.parse(new TextDecoder().decode(value)));
@@ -132,15 +135,16 @@ async function refreshImgsRow(imgs_list) {
     if (img.document_status === 'scanned') imgs_scanned ++;
   });
   
-  if (imgs_scanned >= imgs_list.length) {
+  // 没图片可扫描就隐藏进度条，不显示按钮
+  if (imgs_list.length === 0) {
+    updateProgress(1);
+  } else if (imgs_scanned >= imgs_list.length) {
       // 全部扫描过就启用 生成答案 按钮
       $("#output-imgs-bt").removeAttr("disabled");
   } else {
       // 有任意一张图片未扫描就允许再次扫描
       scan_bt.removeAttr('disabled');
   }
-  // 没图片可加载也隐藏进度条
-  if (imgs_list.length === 0) updateProgress(1);
 }
 
 refreshImgsRow().then(() => {
