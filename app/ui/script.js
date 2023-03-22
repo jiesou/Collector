@@ -193,7 +193,10 @@ $("#output-imgs-bt").on("click", (e) => {
     });
 });
 
-
+function editMessageEle(message_frame, message) {
+  const messageHtml = marked.parse(message.content);
+  message_frame.find('.mdui-list-item-text').html(messageHtml);
+}
 
 async function refreshMessages(last_message) {
   const messages_list = $("#generator-messages-list")
@@ -209,13 +212,12 @@ async function refreshMessages(last_message) {
   
   let message_ele;
   messages.forEach((message) => {
-    message_ele = messages_list.children('[template="generator-message"]').clone().removeAttr('template');
+    message_frame = messages_list.children('[template="generator-message"]').clone().removeAttr('template');
     if (message.role === 'user') {
-      message_ele = messages_list.children('[template="user-message"]').clone().removeAttr('template');
+      message_frame = messages_list.children('[template="user-message"]').clone().removeAttr('template');
     }
-    
-    const messageHtml = marked.parse(message.content);
-    message_ele.find('.mdui-list-item-text').html(messageHtml);
+    editMessageEle(message_frame, message);
+    // 已经有消息元素了
     if (messages_list.children("li:not([template])").length > 0) {
       messages_fragment.push(divider.clone());
     }
@@ -230,7 +232,7 @@ refreshMessages().then(() => {
   clear_bt.on('click', (e) => {
     clear_bt.attr('disabled', true);
     new apiFetch("/api/generator/clear").send().then(() => {
-      refreshMessages().then(() => clear_bt.removeAttr('disabled'));
+      messages_list.children(':not([template])').remove();
     });
   });
   

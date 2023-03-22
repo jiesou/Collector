@@ -54,4 +54,4 @@ def generator_messages():
 @generator_bp.route('/clear')
 def generator_clean():
     g.user["messages"] = []
-    return res(current_app, {'message': 'ok'})
+    return res(current_app, [])
