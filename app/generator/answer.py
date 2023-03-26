@@ -12,16 +12,22 @@ def choiceQues(ques):
 class AnswersGenerator():
     def __init__(self, messages=[]):
         self.messages = messages
+        # 剔除 tag 项
+        self.apiMessages = [{k: v for k, v in msg.items() if k != 'tag'} for msg in messages]
     
-    def send(self, prompt):
-        self.messages.append({"role": "user", "content": prompt})
+    def send(self, message):
+        self.messages.append(message)
+        self.apiMessages.append({
+          "role": message.get("role"),
+          "content": message.get("content")
+        })
     
     def generate(self):
         completion = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
             temperature=0.3,
             stream=True,
-            messages=self.messages)
+            messages=self.apiMessages)
         
         print(completion)
         text = ""

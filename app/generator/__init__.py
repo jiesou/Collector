@@ -23,9 +23,9 @@ def generate_prompt():
 executor = ThreadPoolExecutor(max_workers=2)
 lock = threading.Lock()
 
-def thinking_bgtask(user, prompt):
+def thinking_bgtask(user, message):
     generator = AnswersGenerator(user['messages'])
-    generator.send(prompt)
+    generator.send(message)
     for text_snippet in generator.generate():
         yield text_snippet
     with lock:
@@ -34,10 +34,13 @@ def thinking_bgtask(user, prompt):
         user['messages_status'] = "waiting"
         g.users.save()
 
-@generator_bp.route('/send/?', methods=['POST'])
+@generator_bp.route('/send', methods=['POST'])
 def generator_send():
+    message = {"role": "user", "content": request.data.decode()}
+    message["tag"] = request.args.get('tag')
+    
     bgtask = executor.submit(thinking_bgtask,
-        g.user, request.data.decode())
+        g.user, message)
     g.user["messages_status"] = "thinking"
     
     def stream():

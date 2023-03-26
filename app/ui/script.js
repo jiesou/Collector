@@ -245,7 +245,7 @@ class MessagesList {
   sendApi(message, callback) {
     message.role = "user";
     
-    const req = new apiFetch(`/api/generator/send${message.tag ? '/?tag=' + message.tag : ''}`, {
+    const req = new apiFetch(`/api/generator/send${message.tag ? '?tag=' + message.tag : ''}`, {
       method: 'POST',
       body: message.content
     });
@@ -280,6 +280,7 @@ messages_list.refresh().then(() => {
     clear_bt.attr('disabled', true);
     new apiFetch("/api/generator/clear").send().then(() => {
       messages_list.list_ele.children(':not([template])').remove();
+      messages_list.divider = null;
       clear_bt.removeAttr('disabled');
     });
   });
