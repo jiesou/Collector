@@ -34,7 +34,7 @@ def thinking_bgtask(user, prompt):
         user['messages_status'] = "waiting"
         g.users.save()
 
-@generator_bp.route('/send', methods=['POST'])
+@generator_bp.route('/send/?', methods=['POST'])
 def generator_send():
     bgtask = executor.submit(thinking_bgtask,
         g.user, request.data.decode())

@@ -186,53 +186,101 @@ $("#output-imgs-bt").on("click", (e) => {
     }).send().then((res) => {
         $(e.target).removeAttr("disabled");
         if (res.prompt) {
-          const prompt_box = $("#generator-prompt-box");
-          prompt_box.find(".mdui-textfield-input").val(res.prompt);
-          prompt_box.find("button").trigger("click");
+          // const prompt_box = $("#generator-prompt-box");
+          // prompt_box.find(".mdui-textfield-input").val(res.prompt);
+          // prompt_box.find("button").trigger("click");
+          
+          messages_list.sendApi({'content': res.prompt, 'tag': 'hide'});
         }
     });
 });
 
-function editMessageEle(message_frame, message) {
-  const messageHtml = marked.parse(message.content);
-  message_frame.find('.mdui-list-item-text').html(messageHtml);
-}
 
-async function refreshMessages(last_message) {
-  const messages_list = $("#generator-messages-list")
-  const messages_fragment = [];
-  const divider = $('<div>').addClass('mdui-divider-inset mdui-m-y-0');
-  let messages;
-  if (last_message) {
-    messages = [last_message];
-  } else {
-    messages = await new apiFetch('/api/generator/messages').send();
-    messages_list.children(':not([template])').remove();
+class MessagesList {
+  constructor() {
+    this.list_ele = $("#generator-messages-list");
+    this.messages = [];
+    this.divider = null;
   }
   
-  let message_ele;
-  messages.forEach((message) => {
-    message_frame = messages_list.children('[template="generator-message"]').clone().removeAttr('template');
+  #getDivider() {
+    this.divider = this.divider || $('<div>').addClass('mdui-divider-inset mdui-m-y-0');
+  }
+  
+  async refresh() {
+    this.messages = await new apiFetch('/api/generator/messages').send();
+    
+    let messages_fragment = [];
+    this.messages.forEach((message) => {
+      const message_fragment = this.msgEle(message);
+      messages_fragment = [...messages_fragment, ...message_fragment];
+    });
+    this.list_ele.children(':not([template])').remove();
+    this.list_ele.append(...messages_fragment);
+  }
+  
+  msgEle(message) {
+    const message_fragment = [];
+
+    let message_frame = this.list_ele.children('[template="generator-message"]').clone().removeAttr('template');
     if (message.role === 'user') {
-      message_frame = messages_list.children('[template="user-message"]').clone().removeAttr('template');
+      message_frame = this.list_ele.children('[template="user-message"]').clone().removeAttr('template');
     }
-    editMessageEle(message_frame, message);
-    // 已经有消息元素了
-    if (messages_list.children("li:not([template])").length > 0) {
-      messages_fragment.push(divider.clone());
+    
+    if (message.tag === 'hide') {
+      message_frame.css('background', 'red');
     }
-    messages_fragment.push(message_ele);
-  });
-  messages_list.append(...messages_fragment);
-  return message_ele;
+    const messageHtml = message.content ? marked.parse(message.content) : '';
+    message_frame.find('.mdui-list-item-text').html(messageHtml);
+
+    if (this.divider) {
+      message_fragment.push(this.divider.clone());
+    }
+    message_fragment.push(message_frame);
+
+    this.#getDivider();
+    return message_fragment;
+  }
+  
+  sendApi(message, callback) {
+    message.role = "user";
+    
+    const req = new apiFetch(`/api/generator/send${message.tag ? '/?tag=' + message.tag : ''}`, {
+      method: 'POST',
+      body: message.content
+    });
+    fetch(req.path, req.args).then(async (res) => {
+      // 先创建一个空元素，再往里面添字
+      const message_fragment = this.msgEle({});
+      const list_ele = this.list_ele.append(...message_fragment);
+      // 获取最后一个添加的文本元素
+      const text_ele = list_ele.find('.mdui-list-item-text').last();
+      const reader = res.body.getReader();
+
+      // 读取流，动态添加响应
+      reader.read().then(function appendAnswer({ done, value }) {
+        if (done) {
+          //text_ele.html(marked.parse(text_ele.text()));
+          return;
+        }
+        text_ele.append(new TextDecoder().decode(value));
+  
+        return reader.read().then(appendAnswer);
+      });
+      callback();
+      this.#getDivider();
+    });
+  }
 }
 
-refreshMessages().then(() => {
+const messages_list = new MessagesList();
+messages_list.refresh().then(() => {
   const clear_bt = $('#generator-clear-bt');
   clear_bt.on('click', (e) => {
     clear_bt.attr('disabled', true);
     new apiFetch("/api/generator/clear").send().then(() => {
-      messages_list.children(':not([template])').remove();
+      messages_list.list_ele.children(':not([template])').remove();
+      clear_bt.removeAttr('disabled');
     });
   });
   
@@ -240,29 +288,13 @@ refreshMessages().then(() => {
   const send_bt = prompt_box.children('button');
   const prompt_text = prompt_box.find('.mdui-textfield-input');
   send_bt.on('click', () => {
-    send_bt.attr('disabled', true);
-    const req = new apiFetch("/api/generator/send", {
-      method: 'POST',
-      body: prompt_text.val()
+    send_bt.attr('disabled');
+    const message = {'role': 'user', 'content': prompt_text.val()};
+    const message_fragment = messages_list.msgEle(message);
+    messages_list.list_ele.append(...message_fragment);
+    prompt_text.val('');
+    messages_list.sendApi(message, () => {
+      send_bt.removeAttr('disabled');
     });
-    fetch(req.path, req.args).then(async (res) => {
-      prompt_text.val('');
-      const reader = res.body.getReader();
-      const message_ele = await refreshMessages({'role': 'assistant', 'content': ''});
-      const text_ele = message_ele.find('.mdui-list-item-text');
-
-      reader.read().then(function appendAnswer({ done, value }) {
-        if (done) {
-          send_bt.removeAttr('disabled');
-          text_ele.html(marked.parse(text_ele.text()));
-          return;
-        }
-        text_ele.append(new TextDecoder().decode(value));
-
-        return reader.read().then(appendAnswer);
-      });
-    });
-    refreshMessages({'role': 'user', 'content': prompt_text.val()});
   });
 });
-  
