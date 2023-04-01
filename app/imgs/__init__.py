@@ -55,7 +55,7 @@ def scanning_bgtask():
             # 在锁中进行用户数据、文件系统操作
             with lock:
                 g.users.save()
-        yield json.dumps(result)
+        yield json.dumps(img)
 
 @imgs_bp.route('/scan')
 def scan_imgs():

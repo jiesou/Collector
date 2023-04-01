@@ -45,6 +45,7 @@ class AnswersGenerator():
 2. 如有文章，参考文章进行答题
 2. 每题的答案都要标出题号
 3. 选择题不要重复选项内容，只需填的序号
+4. 无法回答的问题请说明，不要瞎编
 
 """
         # for block in document:
