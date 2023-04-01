@@ -54,80 +54,88 @@ function updateProgress(percent) {
   return progress_bar
 }
 
-function editImgEle(img_frame, img, index) {
-  img_frame.find(".mdui-grid-tile-title").text(index + 1);
-  
-  const icon = $("<i>").addClass("mdui-icon material-icons");
-  const status_fragment = [];
-  if (img.document_status === "scanned") {
-    icon.text("check");
-    status_fragment.push(icon, "已识别");
-  } else if (img.document_status === "unscanned") {
-    icon.text("info_outline");
-    status_fragment.push(icon, "未识别");
-  } else if (img.document_status === "scanning") {
-    icon.text("wifi_tethering");
-    status_fragment.push(icon, "识别中");
+
+class ImgsList {
+  constructor() {
+    this.list_ele = $("#user-imgs-row");
+    this.imgs = [];
   }
-  img_frame.find(".mdui-grid-tile-subtitle").append(...status_fragment);
   
-  img_frame.find("button").on("click", (e) => {
-    const delete_bt = $(e.target);
-    mdui.snackbar({
-      message: "确定删除？",
-      buttonText: "确定",
-      onButtonClick: () => {
-          delete_bt.attr("disabled");
-          new apiFetch(`/api/imgs/delete/${index}`).send().then(() => {
-            delete_bt.closest("div.mdui-col").remove();
-            refreshImgsRow();
-          });
-      }
+  async refresh(res) {
+    this.imgs = res || await new apiFetch("/api/imgs/list").send();
+    // 移除所有非 template 的图片，以便刷新
+    this.list_ele.children(':not([template])').remove();
+    let imgs_loaded = 0;
+    let imgs_scanned = 0;
+    const imgs_fragment = [];
+    this.imgs.forEach((img, index) => {
+      const img_frame = this.imgEle(img, index);
+      
+      img_frame.find('img').on("load", () => {
+          imgs_loaded ++;
+          updateProgress(imgs_loaded / this.imgs.length);
+      });
+      
+      if (img.document_status === 'scanned') imgs_scanned ++;
+      
+      imgs_fragment.push(img_frame);
     });
-  });
+    this.list_ele.append(...imgs_fragment);
+    
+    // 没图片可加载就隐藏进度条（正常需要图片加载完成才能隐藏进度条）
+    if (this.imgs.length === 0) {
+      updateProgress(1);
+    } else if (imgs_scanned >= this.imgs.length) {
+      // 全部扫描过就启用 生成答案 按钮
+      $("#output-imgs-bt").removeAttr("disabled");
+    } else if (this.imgs.findIndex((img) => img.document_status === "unscanned") >= 0) {
+      // 有任意一张图片未扫描就允许再次扫描
+      $("#scan-imgs-bt").removeAttr('disabled');
+    }
+  }
   
+  imgEle(img, index) {
+    const img_frame = this.list_ele.children("[template]").clone().removeAttr("template");
+
+    img_frame.find(".mdui-grid-tile-title").text(index + 1);
+    img_frame.find('img').attr("src", img.url);
+    
+    const icon = $("<i>").addClass("mdui-icon material-icons");
+    const status_fragment = [];
+    if (img.document_status === "scanned") {
+      icon.text("check");
+      status_fragment.push(icon, "已识别");
+    } else if (img.document_status === "unscanned") {
+      icon.text("info_outline");
+      status_fragment.push(icon, "未识别");
+    } else if (img.document_status === "scanning") {
+      icon.text("wifi_tethering");
+      status_fragment.push(icon, "识别中");
+    }
+    img_frame.find(".mdui-grid-tile-subtitle").append(...status_fragment);
+    
+    img_frame.find("button").on("click", (e) => {
+      const delete_bt = $(e.target);
+      mdui.snackbar({
+        message: "确定删除？",
+        buttonText: "确定",
+        onButtonClick: () => {
+            delete_bt.attr("disabled");
+            new apiFetch(`/api/imgs/delete/${index}`).send().then(() => {
+              delete_bt.closest("div.mdui-col").remove();
+              imgs_list.refresh();
+            });
+        }
+      });
+    });
+    
+    return img_frame;
+  }
 }
 
-async function refreshImgsRow(imgs_list) {
-  if (!imgs_list) {
-    var imgs_list = await new apiFetch("/api/imgs/list").send();
-  }
-  
-  const imgs_row = $("#user-imgs-row");
-
-  // 移除所有非 template 的图片，以便刷新
-  imgs_row.children(':not([template])').remove();
-  let imgs_loaded = 0;
-  let imgs_scanned = 0;
-  imgs_list.forEach((img, index) => {
-    const img_frame = imgs_row.children("[template]").clone().removeAttr("template");
-    editImgEle(img_frame, img, index);
-
-    const img_ele = img_frame.find('img');
-    img_ele.attr("src", img.url);
-    img_ele.on("load", () => {
-        imgs_loaded ++;
-        if (imgs_loaded >= imgs_list.length) updateProgress(1);
-    });
-    imgs_row.append(img_frame);
-
-    if (img.document_status === 'scanned') imgs_scanned ++;
-  });
-  
-  // 没图片可加载就隐藏进度条（正常需要图片加载完成才能隐藏进度条）
-  if (imgs_list.length === 0) {
-    updateProgress(1);
-  } else if (imgs_scanned >= imgs_list.length) {
-    // 全部扫描过就启用 生成答案 按钮
-    $("#output-imgs-bt").removeAttr("disabled");
-  } else if (imgs_list.findIndex((img) => img.document_status === "unscanned") >= 0) {
-    // 有任意一张图片未扫描就允许再次扫描
-    $("#scan-imgs-bt").removeAttr('disabled');
-  }
-}
-
-/* 初始化 imgs-row，同时激活上传图片功能 */
-refreshImgsRow().then(() => {
+const imgs_list = new ImgsList();
+/* 初始化 imgs_list，同时激活上传图片功能 */
+imgs_list.refresh().then(() => {
   const upload_input = $("#upload-img-input");
   upload_input.on("change", (e) => {
       const data = new FormData();
@@ -138,7 +146,7 @@ refreshImgsRow().then(() => {
           method: 'POST',
           body: data
       }).send().then((res) => {
-          refreshImgsRow(res);
+          imgs_list.refresh(res);
       });
   });
   
@@ -150,35 +158,34 @@ refreshImgsRow().then(() => {
   upload_bt.removeAttr('disabled');
 });
 
+// 开始识别功能
 $("#scan-imgs-bt").on("click", (e) => {
     $(e.target).attr('disabled');
-    const user_imgs = $("#user-imgs-row > .mdui-col");
+    const img_cols = $("#user-imgs-row > .mdui-col");
     const req = new apiFetch("/api/imgs/scan");
     fetch(req.path, req.args).then((res) => {
       updateProgress(0);
       mdui.snackbar("已提交请求，可关闭浏览器");
       
       const reader = res.body.getReader();
-      const finshedImgs = [];
+      const imgs_scanned = [];
       reader.read().then(function updateScanProgress({ done, value }) {
         if (done) {
-          updateProgress(1);
           mdui.snackbar("全部扫描完成");
-          refreshImgsRow().then(() => {
-            $("#output-imgs-bt").removeAttr("disabled");
-          });
-          return;
         }
-        const lastestImg = JSON.parse(new TextDecoder().decode(value));
-        finshedImgs.push(lastestImg);
-
-        user_imgs.index(lastestImg.index)
-        updateProgress(finshedImgs.length/imgs_list.length);
+        const img = JSON.parse(new TextDecoder().decode(value));
+        imgs_scanned.push(img);
+        
+        // 替换为扫描后的新图片
+        const img_frame = imgs_list.imgEle(img, imgs_scanned.length)
+        img_cols[imgs_scanned.length].replaceWith(img_frame);
+        updateProgress(imgs_scanned.length / imgs_list.imgs.length);
         return reader.read().then(updateScanProgress);
       });
     });
 });
 
+// 生成答案功能
 $("#output-imgs-bt").on("click", (e) => {
     $(e.target).attr("disabled");
     new apiFetch("/api/generator/generate_prompt", {
@@ -190,7 +197,7 @@ $("#output-imgs-bt").on("click", (e) => {
           // prompt_box.find(".mdui-textfield-input").val(res.prompt);
           // prompt_box.find("button").trigger("click");
           
-          messages_list.sendApi({'content': res.prompt, 'tag': 'hide'});
+          messages_list.sendApi({'content': res.prompt, 'tag': 'ques'});
         }
     });
 });
@@ -210,7 +217,7 @@ class MessagesList {
   async refresh() {
     this.messages = await new apiFetch('/api/generator/messages').send();
     
-    let messages_fragment = [];
+  let messages_fragment = [];
     this.messages.forEach((message) => {
       const message_fragment = this.msgEle(message);
       messages_fragment = [...messages_fragment, ...message_fragment];
@@ -227,11 +234,13 @@ class MessagesList {
       message_frame = this.list_ele.children('[template="user-message"]').clone().removeAttr('template');
     }
     
-    if (message.tag === 'hide') {
-      message_frame.css('background', 'red');
+    let html = "";
+    if (message.tag === 'ques') {
+      html = '<i class="mdui-icon material-icons">info</i>识别的题目';
+    } else if (message.content) {
+      html = marked.parse(message.content);
     }
-    const messageHtml = message.content ? marked.parse(message.content) : '';
-    message_frame.find('.mdui-list-item-text').html(messageHtml);
+    message_frame.find('.mdui-list-item-text').html(html);
 
     if (this.divider) {
       message_fragment.push(this.divider.clone());
