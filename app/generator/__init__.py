@@ -9,7 +9,7 @@ generator_bp = Blueprint('Generator', __name__)
 @generator_bp.route('/generate_prompt', methods=['POST'])
 def generate_prompt():
     body = parse_body(request, {})
-    body.setdefault("imgs", g.user["imgs"])
+    body.setdefault("imgs", g.user.imgs)
     # 未指定需要处理的页数就遍历全部图片
     body.setdefault("indexs", list(range(len(body["imgs"]))))
     full_document = ""
@@ -24,24 +24,24 @@ executor = ThreadPoolExecutor(max_workers=2)
 lock = threading.Lock()
 
 def thinking_bgtask(user, message):
-    generator = AnswersGenerator(user['messages'])
+    generator = AnswersGenerator(user.messages)
     generator.send(message)
     for text_snippet in generator.generate():
         yield text_snippet
     with lock:
         # 更新 用户数据 中的 消息列表
-        user['messages'] = generator.messages
-        user['messages_status'] = "waiting"
+        user.messages = generator.messages
+        user.messages_status = "waiting"
         g.users.save()
 
 @generator_bp.route('/send', methods=['POST'])
 def generator_send():
     message = {"role": "user", "content": request.data.decode()}
-    message["tag"] = request.args.get('tag')
+    message.tag = request.args.get('tag')
     
     bgtask = executor.submit(thinking_bgtask,
         g.user, message)
-    g.user["messages_status"] = "thinking"
+    g.user.messages_status = "thinking"
     
     def stream():
         yield ""
@@ -52,9 +52,9 @@ def generator_send():
 
 @generator_bp.route('/messages')
 def generator_messages():
-    return res(current_app, g.user["messages"])
+    return res(current_app, g.user.messages)
 
 @generator_bp.route('/clear')
 def generator_clean():
-    g.user["messages"] = []
+    g.user.messages = []
     return res(current_app, [])

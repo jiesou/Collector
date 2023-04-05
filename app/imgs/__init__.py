@@ -27,7 +27,7 @@ def get_imgs_list():
         res_list = copy.deepcopy(res_list)
         for img in res_list:
             if 'document_text' in img:
-               del img['document_text']
+               del img.document_text
     return res(current_app, res_list)
 
 @imgs_bp.route('/delete/<int:index>')
@@ -35,7 +35,7 @@ def delete_img(index):
     if index < len(g.user.imgs):
         try:
           # 连接 "data" 将URL的根目录转为文件系统相对路径
-          os.remove('data' + g.user.imgs[index]["url"])
+          os.remove('data' + g.user.imgs[index].url)
         except: pass
         g.user.imgs.pop(index)
     return get_imgs_list()
@@ -47,11 +47,11 @@ def scanning_bgtask():
     for img in g.user.imgs:
         result = img.get("document_text")
         if result is None:
-            result = Image2Document('data' + img["url"])
+            result = Image2Document('data' + img.url)
             
             # img["document"] = result
-            img["document_text"] = result
-            img["document_status"] = "scanned"
+            img.document_text = result
+            img.document_status = "scanned"
             # 在锁中进行用户数据、文件系统操作
             with lock:
                 g.db_session.commit()
