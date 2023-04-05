@@ -1,3 +1,5 @@
+from flask import Flask, current_app
+from flask_sqlalchemy import SQLAlchemy
 import os, json
 from collections import UserDict
 
@@ -29,11 +31,24 @@ def parse_body(req, default):
 
     return data if data is not None else default
 
-class Users(UserDict):
-    def __init__(self, json_path):
-        self.json_path = json_path
-        with open(self.json_path, "r") as json_file:
-            self.data = json.load(json_file)
-    def save(self):
-        with open(self.json_path, "w") as json_file:
-            json.dump(self.data, json_file)
+
+db = SQLAlchemy()
+
+class User(db.Model):
+    id = db.Column(db.String, primary_key=True)
+    imgs = db.relationship('Img', backref='user', lazy=True)
+    messages = db.relationship('Message', backref='user', lazy=True)
+
+class Img(db.Model):
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    url = db.Column(db.String)
+    document_text = db.Column(db.String)
+    document_status = db.Column(db.String)
+
+class Message(db.Model):
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    role = db.Column(db.String)
+    content = db.Column(db.String)
+    tag = db.Column(db.String)
