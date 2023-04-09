@@ -1,7 +1,7 @@
 from flask import Blueprint, current_app, stream_with_context, request, g
-import os, threading, json, copy
+import os, json
 from concurrent.futures import ThreadPoolExecutor
-from units import res, User
+from units import res, Img
 from .scan_plaintext import Image2Document
 
 imgs_bp = Blueprint('imgs', __name__)
@@ -13,21 +13,25 @@ def upload_imgs():
         name, ext = os.path.splitext(file.filename)
         filename = f'{g.user_id}-{len(user_imgs)}{ext}'
         
-        user_imgs.append({
-            "url": "/user-upload/" + filename,
-            "document_status": "unscanned"
-        })
+        img = Img(
+            url="/user-upload/" + filename,
+            document_status="unscanned",
+            user=g.user
+        )
+        g.db_session.add(img)
         file.save(os.path.join(current_app.config['UPLOAD_FOLDER'], filename))
-    return res(current_app, user_imgs)
+        
+    return res(current_app, img.as_dict())
 
 @imgs_bp.route('/list')
 def get_imgs_list():
-    res_list = g.user.imgs
+    imgs = g.user.imgs
+    res_list = [img.as_dict() for img in imgs]
     if not request.args.get("documents"):
-        res_list = copy.deepcopy(res_list)
         for img in res_list:
-            if 'document_text' in img:
+            if hasattr(img, 'document_text'):
                del img.document_text
+    
     return res(current_app, res_list)
 
 @imgs_bp.route('/delete/<int:index>')
@@ -37,25 +41,22 @@ def delete_img(index):
           # 连接 "data" 将URL的根目录转为文件系统相对路径
           os.remove('data' + g.user.imgs[index].url)
         except: pass
-        g.user.imgs.pop(index)
+        g.db_session.delete(g.user.imgs[index])
     return get_imgs_list()
 
 executor = ThreadPoolExecutor(max_workers=2)
-lock = threading.Lock()
 
 def scanning_bgtask():
     for img in g.user.imgs:
-        result = img.get("document_text")
+        result = img.document_text
         if result is None:
             result = Image2Document('data' + img.url)
             
             # img["document"] = result
             img.document_text = result
             img.document_status = "scanned"
-            # 在锁中进行用户数据、文件系统操作
-            with lock:
-                g.db_session.commit()
-        yield json.dumps(img)
+            g.db_session.commit()
+        yield json.dumps(img.as_dict())
 
 @imgs_bp.route('/scan')
 def scan_imgs():

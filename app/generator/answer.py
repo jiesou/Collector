@@ -10,7 +10,18 @@ def choiceQues(ques):
     return text
 
 class AnswersGenerator():
-    def __init__(self, messages=[]):
+    system_message = {
+          "role": "system",
+          "content": """目的：生成以下题目的答案
+要求：
+1. 除了答案不得生成任何其它东西，除非我要求你解释答案
+2. 如有文章，参考文章进行答题
+2. 每题的答案都要标出题号
+3. 选择题不要重复选项内容，只需填的序号
+4. 不是题目，无法回答请说明
+
+"""}
+    def __init__(self, messages=[system_message]):
         self.messages = messages
         # 剔除 tag 项
         self.apiMessages = [{k: v for k, v in msg.items() if k != 'tag'} for msg in messages]
@@ -29,7 +40,6 @@ class AnswersGenerator():
             stream=True,
             messages=self.apiMessages)
         
-        print(completion)
         text = ""
         for event in completion:
             text_snippet = event.choices[0]['delta'].get('content', '')
@@ -39,15 +49,7 @@ class AnswersGenerator():
     
     @staticmethod
     def generatePrompt(document):
-        prompt = """目的：生成以下题目的答案
-要求：
-1. 除了答案不得生成任何其它东西，除非我要求你解释答案
-2. 如有文章，参考文章进行答题
-2. 每题的答案都要标出题号
-3. 选择题不要重复选项内容，只需填的序号
-4. 无法回答的问题请说明，不要瞎编
-
-"""
+        prompt = ""
         # for block in document:
             # if block["type"] == "choice_ques":
                 # prompt += choiceQues(block) + '\n'

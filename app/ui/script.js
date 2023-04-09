@@ -22,6 +22,9 @@ class apiFetch {
   async send() {
       this.res = await fetch(this.path, this.args);
       
+      if (!this.res.ok) {
+        mdui.snackbar("Server Error " + this.res.message);
+      }
       try {
         const json = await this.res.json();
         if (json.code === 0 && json.data) {
@@ -61,8 +64,8 @@ class ImgsList {
     this.imgs = [];
   }
   
-  async refresh(res) {
-    this.imgs = res || await new apiFetch("/api/imgs/list").send();
+  async refresh() {
+    this.imgs = await new apiFetch("/api/imgs/list").send();
     // 移除所有非 template 的图片，以便刷新
     this.list_ele.children(':not([template])').remove();
     let imgs_loaded = 0;
@@ -146,12 +149,14 @@ imgs_list.refresh().then(() => {
           method: 'POST',
           body: data
       }).send().then((res) => {
-          imgs_list.refresh(res);
+          upload_bt.removeAttr('disabled');
+          imgs_list.refresh();
       });
   });
   
   const upload_bt = $("#upload-img-bt");
-  $("#upload-img-bt").on("click", (e) => {
+  upload_bt.on("click", (e) => {
+    upload_bt.attr('disabled');
     // 当点击上传图片按钮时触发被隐藏的 input
     upload_input.trigger('click');
   });
@@ -180,6 +185,7 @@ $("#scan-imgs-bt").on("click", (e) => {
         const img_frame = imgs_list.imgEle(img, imgs_scanned.length)
         img_cols[imgs_scanned.length].replaceWith(img_frame);
         updateProgress(imgs_scanned.length / imgs_list.imgs.length);
+        // 下一轮读取
         return reader.read().then(updateScanProgress);
       });
     });

@@ -1,5 +1,4 @@
 from flask import Blueprint, current_app, stream_with_context, request, g
-import threading
 from concurrent.futures import ThreadPoolExecutor
 from units import res, parse_body
 from .answer import AnswersGenerator
@@ -15,24 +14,21 @@ def generate_prompt():
     full_document = ""
     for index in body["indexs"]:
         img = body["imgs"][index]
-        full_document += img.get("document_text", "")
+        full_document += getattr(img, "document_text") or ""
     
     prompt = AnswersGenerator.generatePrompt(full_document)
     return res(current_app, {'prompt': prompt})
 
 executor = ThreadPoolExecutor(max_workers=2)
-lock = threading.Lock()
 
 def thinking_bgtask(user, message):
     generator = AnswersGenerator(user.messages)
     generator.send(message)
     for text_snippet in generator.generate():
         yield text_snippet
-    with lock:
-        # 更新 用户数据 中的 消息列表
-        user.messages = generator.messages
-        user.messages_status = "waiting"
-        g.users.save()
+    # 更新 用户数据 中的 消息列表
+    user.messages = generator.messages
+    g.db_session.commit()
 
 @generator_bp.route('/send', methods=['POST'])
 def generator_send():
@@ -41,12 +37,11 @@ def generator_send():
     
     bgtask = executor.submit(thinking_bgtask,
         g.user, message)
-    g.user.messages_status = "thinking"
     
     def stream():
         yield ""
-        for result in bgtask.result():
-            yield result
+        for text_snippet in bgtask.result():
+            yield text_snippet
     return stream_with_context(stream())
 
 
@@ -56,5 +51,8 @@ def generator_messages():
 
 @generator_bp.route('/clear')
 def generator_clean():
-    g.user.messages = []
+    g.user.messages.delete()
+    #for message in g.user.messages:
+    #    db.session.delete(message)
+    # db.session.query(Message).filter(Message.id.in_([instance.id for instance in instances])).delete(synchronize_session=False)
     return res(current_app, [])

@@ -45,6 +45,9 @@ class Img(db.Model):
     url = db.Column(db.String)
     document_text = db.Column(db.String)
     document_status = db.Column(db.String)
+ 
+    def as_dict(self):
+        return {c.name: getattr(self, c.name) for c in self.__table__.columns}
 
 class Message(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
