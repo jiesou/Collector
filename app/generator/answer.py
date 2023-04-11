@@ -23,8 +23,8 @@ class AnswersGenerator():
 """}
     def __init__(self, messages=[system_message]):
         self.messages = messages
-        # 剔除 tag 项
-        self.apiMessages = [{k: v for k, v in msg.items() if k != 'tag'} for msg in messages]
+        # 只保留API能接受的属性
+        self.apiMessages = [{k: v for k, v in msg.items() if k in ['role', 'content']} for msg in messages]
     
     def send(self, message):
         self.messages.append(message)

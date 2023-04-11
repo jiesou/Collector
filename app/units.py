@@ -34,24 +34,27 @@ def parse_body(req, default):
 
 db = SQLAlchemy()
 
-class User(db.Model):
+class BaseModel(db.Model):
+    __abstract__ = True
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+
+    def as_dict(self):
+        return {col.name: getattr(self, col.name) for col in self.__table__.columns}
+
+class User(BaseModel):
     id = db.Column(db.String, primary_key=True)
     imgs = db.relationship('Img', backref='user', lazy=True)
     messages = db.relationship('Message', backref='user', lazy=True)
 
-class Img(db.Model):
-    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+class Img(BaseModel):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     url = db.Column(db.String)
     document_text = db.Column(db.String)
     document_status = db.Column(db.String)
- 
-    def as_dict(self):
-        return {c.name: getattr(self, c.name) for c in self.__table__.columns}
 
-class Message(db.Model):
-    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+class Message(BaseModel):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     role = db.Column(db.String)
     content = db.Column(db.String)
     tag = db.Column(db.String)
+

@@ -23,7 +23,7 @@ class apiFetch {
       this.res = await fetch(this.path, this.args);
       
       if (!this.res.ok) {
-        mdui.snackbar("Server Error " + this.res.message);
+        mdui.snackbar("Server Error " + String(this.res.message));
       }
       try {
         const json = await this.res.json();
@@ -88,11 +88,18 @@ class ImgsList {
     // 没图片可加载就隐藏进度条（正常需要图片加载完成才能隐藏进度条）
     if (this.imgs.length === 0) {
       updateProgress(1);
-    } else if (imgs_scanned >= this.imgs.length) {
-      // 全部扫描过就启用 生成答案 按钮
+    }
+    this.updateActionButtons();
+  }
+  
+  updateActionButtons() {
+    // 没图片可加载就隐藏进度条（正常需要图片加载完成才能隐藏进度条）
+    if (this.imgs.findIndex((img) => img.document_status === "scanned") != -1) {
+      // 有任意一张图片扫描过就启用 生成答案 按钮
       $("#output-imgs-bt").removeAttr("disabled");
-    } else if (this.imgs.findIndex((img) => img.document_status === "unscanned") >= 0) {
-      // 有任意一张图片未扫描就允许再次扫描
+    }
+    if (this.imgs.findIndex((img) => img.document_status === "unscanned") != -1) {
+      // 有任意一张图片未扫描就启用 扫描图片 按钮
       $("#scan-imgs-bt").removeAttr('disabled');
     }
   }
@@ -141,6 +148,8 @@ const imgs_list = new ImgsList();
 imgs_list.refresh().then(() => {
   const upload_input = $("#upload-img-input");
   upload_input.on("change", (e) => {
+      upload_bt.attr('disabled');
+      updateProgress(0);
       const data = new FormData();
       for (let file of e.target.files) {
         data.append('file', file);
@@ -148,15 +157,18 @@ imgs_list.refresh().then(() => {
       new apiFetch("/api/imgs/upload", {
           method: 'POST',
           body: data
-      }).send().then((res) => {
+      }).send().then((img) => {
           upload_bt.removeAttr('disabled');
-          imgs_list.refresh();
+          updateProgress(1);
+          const img_ele = imgs_list.imgEle(img, imgs_list.imgs.length);
+          imgs_list.list_ele.append(img_ele);
+          imgs_list.imgs.push(img);
+          imgs_list.updateActionButtons();
       });
   });
   
   const upload_bt = $("#upload-img-bt");
   upload_bt.on("click", (e) => {
-    upload_bt.attr('disabled');
     // 当点击上传图片按钮时触发被隐藏的 input
     upload_input.trigger('click');
   });
@@ -197,13 +209,14 @@ $("#output-imgs-bt").on("click", (e) => {
     new apiFetch("/api/generator/generate_prompt", {
         "method": "POST"
     }).send().then((res) => {
-        $(e.target).removeAttr("disabled");
         if (res.prompt) {
-          // const prompt_box = $("#generator-prompt-box");
-          // prompt_box.find(".mdui-textfield-input").val(res.prompt);
-          // prompt_box.find("button").trigger("click");
-          
-          messages_list.sendApi({'content': res.prompt, 'tag': 'ques'});
+          const message = {'role': 'user', 'content': res.prompt, 'tag': 'ques'};
+          const message_fragment = messages_list.msgEle(message);
+          messages_list.list_ele.append(...message_fragment);
+          // 先把当前发送的用户消息（题目）上屏
+          messages_list.sendApi(message, () => {
+            $(e.target).removeAttr("disabled")
+          });
         }
     });
 });
@@ -223,10 +236,9 @@ class MessagesList {
   async refresh() {
     this.messages = await new apiFetch('/api/generator/messages').send();
     
-  let messages_fragment = [];
+    const messages_fragment = [];
     this.messages.forEach((message) => {
-      const message_fragment = this.msgEle(message);
-      messages_fragment = [...messages_fragment, ...message_fragment];
+      messages_fragment.push(...this.msgEle(message));
     });
     this.list_ele.children(':not([template])').remove();
     this.list_ele.append(...messages_fragment);
@@ -235,19 +247,19 @@ class MessagesList {
   msgEle(message) {
     const message_fragment = [];
 
-    let message_frame = this.list_ele.children('[template="generator-message"]').clone().removeAttr('template');
-    if (message.role === 'user') {
-      message_frame = this.list_ele.children('[template="user-message"]').clone().removeAttr('template');
-    }
+    if (message.role === 'system') return message_fragment;
+    const template = (message.role === 'user') ? "user-message" : "generator-message";
+    const message_frame = this.list_ele.children(`[template="${template}"]`).clone().removeAttr('template');
     
     let html = "";
     if (message.tag === 'ques') {
-      html = '<i class="mdui-icon material-icons">info</i>识别的题目';
+      html += '<i class="mdui-icon material-icons">info</i> 识别的题目';
     } else if (message.content) {
-      html = marked.parse(message.content);
+      html += marked.parse(message.content);
     }
+    
     message_frame.find('.mdui-list-item-text').html(html);
-
+    
     if (this.divider) {
       message_fragment.push(this.divider.clone());
     }
@@ -258,7 +270,7 @@ class MessagesList {
   }
   
   sendApi(message, callback) {
-    message.role = "user";
+    message.role = message.role || "user";
     
     const req = new apiFetch(`/api/generator/send${message.tag ? '?tag=' + message.tag : ''}`, {
       method: 'POST',
@@ -275,14 +287,13 @@ class MessagesList {
       // 读取流，动态添加响应
       reader.read().then(function appendAnswer({ done, value }) {
         if (done) {
-          //text_ele.html(marked.parse(text_ele.text()));
+          callback();
           return;
         }
-        text_ele.append(new TextDecoder().decode(value));
-  
+        text_ele.html(marked.parse(text_ele.html() + new TextDecoder().decode(value)));
+        
         return reader.read().then(appendAnswer);
       });
-      callback();
       this.#getDivider();
     });
   }
@@ -309,6 +320,7 @@ messages_list.refresh().then(() => {
     const message_fragment = messages_list.msgEle(message);
     messages_list.list_ele.append(...message_fragment);
     prompt_text.val('');
+    // 先把当前发送的用户消息上屏
     messages_list.sendApi(message, () => {
       send_bt.removeAttr('disabled');
     });

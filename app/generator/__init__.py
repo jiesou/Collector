@@ -1,6 +1,7 @@
 from flask import Blueprint, current_app, stream_with_context, request, g
 from concurrent.futures import ThreadPoolExecutor
-from units import res, parse_body
+import json
+from units import res, parse_body, Message
 from .answer import AnswersGenerator
 
 generator_bp = Blueprint('Generator', __name__)
@@ -21,22 +22,36 @@ def generate_prompt():
 
 executor = ThreadPoolExecutor(max_workers=2)
 
-def thinking_bgtask(user, message):
-    generator = AnswersGenerator(user.messages)
-    generator.send(message)
+def thinking_bgtask(message):
+    dict_medsages = [msg.as_dict() for msg in g.user.messages]
+    generator = AnswersGenerator(dict_medsages if dict_medsages else None)
+    before_length = len(generator.messages)
+
+    generator.send(message.as_dict())
     for text_snippet in generator.generate():
         yield text_snippet
-    # 更新 用户数据 中的 消息列表
-    user.messages = generator.messages
+
+    # 切片获取发送后新增的几条消息
+    new_messages = generator.messages[before_length:]
+    # 向数据库中新增消息
+    for message in new_messages:
+        g.db_session.add(Message(
+            role=message.get("role"),
+            content=message.get("content"),
+            tag=message.get("tag"),
+            user=g.user))
     g.db_session.commit()
 
 @generator_bp.route('/send', methods=['POST'])
 def generator_send():
-    message = {"role": "user", "content": request.data.decode()}
-    message.tag = request.args.get('tag')
+    message = Message(
+        role="user",
+        content=request.data.decode(),
+        tag=request.args.get('tag'),
+        user=g.user
+    )
     
-    bgtask = executor.submit(thinking_bgtask,
-        g.user, message)
+    bgtask = executor.submit(thinking_bgtask, message)
     
     def stream():
         yield ""
@@ -47,12 +62,9 @@ def generator_send():
 
 @generator_bp.route('/messages')
 def generator_messages():
-    return res(current_app, g.user.messages)
+    return res(current_app, [item.as_dict() for item in g.user.messages])
 
 @generator_bp.route('/clear')
 def generator_clean():
-    g.user.messages.delete()
-    #for message in g.user.messages:
-    #    db.session.delete(message)
-    # db.session.query(Message).filter(Message.id.in_([instance.id for instance in instances])).delete(synchronize_session=False)
-    return res(current_app, [])
+    g.db_session.delete(msg) for msg in g.user.messages
+    return res(current_app, g.user.messages)
