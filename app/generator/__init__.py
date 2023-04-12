@@ -23,9 +23,10 @@ def generate_prompt():
 executor = ThreadPoolExecutor(max_workers=2)
 
 def thinking_bgtask(message):
-    dict_medsages = [msg.as_dict() for msg in g.user.messages]
-    generator = AnswersGenerator(dict_medsages if dict_medsages else None)
-    before_length = len(generator.messages)
+    dict_messages = [msg.as_dict() for msg in g.user.messages]
+    before_length = len(dict_messages)
+
+    generator = AnswersGenerator(dict_messages if dict_messages else None)
 
     generator.send(message.as_dict())
     for text_snippet in generator.generate():
@@ -33,6 +34,7 @@ def thinking_bgtask(message):
 
     # 切片获取发送后新增的几条消息
     new_messages = generator.messages[before_length:]
+    print(new_messages)
     # 向数据库中新增消息
     for message in new_messages:
         g.db_session.add(Message(
@@ -66,5 +68,6 @@ def generator_messages():
 
 @generator_bp.route('/clear')
 def generator_clean():
-    g.db_session.delete(msg) for msg in g.user.messages
-    return res(current_app, g.user.messages)
+    for msg in g.user.messages:
+        g.db_session.delete(msg)
+    return res(current_app, [])

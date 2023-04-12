@@ -27,7 +27,6 @@ def upload_imgs():
 def get_imgs_list():
     imgs = g.user.imgs
     res_list = [img.as_dict() for img in imgs]
-    print(g.user.imgs[0])
     if not request.args.get("documents"):
         for img in res_list:
             if hasattr(img, 'document_text'):

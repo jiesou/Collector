@@ -10,18 +10,15 @@ def choiceQues(ques):
     return text
 
 class AnswersGenerator():
-    system_message = {
+    def __init__(self, messages=None):
+        if messages is None: messages = [{
           "role": "system",
           "content": """目的：生成以下题目的答案
 要求：
-1. 除了答案不得生成任何其它东西，除非我要求你解释答案
-2. 如有文章，参考文章进行答题
-2. 每题的答案都要标出题号
-3. 选择题不要重复选项内容，只需填的序号
-4. 不是题目，无法回答请说明
-
-"""}
-    def __init__(self, messages=[system_message]):
+除了答案不得生成任何其它东西
+每题的答案都要标出题号
+选择题不要重复选项内容，只需填的序号
+不是题目，无法回答请说明。回答尽量简短准确"""}]
         self.messages = messages
         # 只保留API能接受的属性
         self.apiMessages = [{k: v for k, v in msg.items() if k in ['role', 'content']} for msg in messages]
@@ -34,6 +31,7 @@ class AnswersGenerator():
         })
     
     def generate(self):
+        print(self.apiMessages)
         completion = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
             temperature=0.3,
