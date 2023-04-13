@@ -23,7 +23,7 @@ class apiFetch {
       this.res = await fetch(this.path, this.args);
       
       if (!this.res.ok) {
-        mdui.snackbar("Server Error " + String(this.res.message));
+        mdui.snackbar("Server Error " + String(this.res.message || this.res.code));
       }
       try {
         const json = await this.res.json();
@@ -285,12 +285,14 @@ class MessagesList {
       const reader = res.body.getReader();
 
       // 读取流，动态添加响应
+      let received_text = ""
       reader.read().then(function appendAnswer({ done, value }) {
         if (done) {
           callback();
           return;
         }
-        text_ele.html(marked.parse(text_ele.html() + new TextDecoder().decode(value)));
+        received_text += new TextDecoder().decode(value)
+        text_ele.html(marked.parse(received_text));
         
         return reader.read().then(appendAnswer);
       });
