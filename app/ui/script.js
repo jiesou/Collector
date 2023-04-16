@@ -64,19 +64,24 @@ class ImgsList {
     this.imgs = [];
   }
   
-  async refresh() {
-    this.imgs = await new apiFetch("/api/imgs/list").send();
-    // 移除所有非 template 的图片，以便刷新
-    this.list_ele.children(':not([template])').remove();
+  async refresh(append_imgs) {
+    const imgs = append_imgs || await new apiFetch("/api/imgs/list").send();
+    if (append_imgs) {
+      this.imgs.push(...imgs);
+    } else {
+      this.imgs = imgs
+      // 移除所有非 template 的图片，以便刷新
+      this.list_ele.children(':not([template])').remove();
+    }
     let imgs_loaded = 0;
     let imgs_scanned = 0;
     const imgs_fragment = [];
-    this.imgs.forEach((img, index) => {
+    imgs.forEach((img, index) => {
       const img_frame = this.imgEle(img, index);
       
       img_frame.find('img').on("load", () => {
           imgs_loaded ++;
-          updateProgress(imgs_loaded / this.imgs.length);
+          updateProgress(imgs_loaded / imgs.length);
       });
       
       if (img.document_status === 'scanned') imgs_scanned ++;
@@ -86,26 +91,19 @@ class ImgsList {
     this.list_ele.append(...imgs_fragment);
     
     // 没图片可加载就隐藏进度条（正常需要图片加载完成才能隐藏进度条）
-    if (this.imgs.length === 0) {
+    if (imgs.length === 0) {
       updateProgress(1);
     }
     this.updateActionButtons();
   }
   
   updateActionButtons() {
-    // 没图片可加载就隐藏进度条（正常需要图片加载完成才能隐藏进度条）
-    if (this.imgs.findIndex((img) => img.document_status === "scanned") != -1) {
-      // 有任意一张图片扫描过就启用 生成答案 按钮
-      $("#output-imgs-bt").removeAttr("disabled");
-    } else {
-      $("#output-imgs-bt").attr("disabled");
-    }
-    if (this.imgs.findIndex((img) => img.document_status === "unscanned") != -1) {
-      // 有任意一张图片未扫描就启用 扫描图片 按钮
-      $("#scan-imgs-bt").removeAttr('disabled');
-    } else {
-      $("#scan-imgs-bt").attr('disabled');
-    }
+    // 有任意一张图片未扫描就启用 扫描图片 按钮
+    $("#scan-imgs-bt").prop("disabled", 
+        !this.imgs.some((img) => img.document_status === "unscanned"));
+    // 有任意一张图片已扫描就启用 生成答案 按钮
+    $("#output-imgs-bt").prop("disabled",
+        !this.imgs.some((img) => img.document_status === "scanned"));
   }
   
   imgEle(img, index) {
@@ -161,13 +159,10 @@ imgs_list.refresh().then(() => {
       new apiFetch("/api/imgs/upload", {
           method: 'POST',
           body: data
-      }).send().then((img) => {
+      }).send().then((new_imgs) => {
           upload_bt.removeAttr('disabled');
           updateProgress(1);
-          const img_ele = imgs_list.imgEle(img, imgs_list.imgs.length);
-          imgs_list.list_ele.append(img_ele);
-          imgs_list.imgs.push(img);
-          imgs_list.updateActionButtons();
+          imgs_list.refresh(new_imgs);
       });
   });
   
@@ -182,7 +177,6 @@ imgs_list.refresh().then(() => {
 // 开始识别功能
 $("#scan-imgs-bt").on("click", (e) => {
     $(e.target).attr('disabled');
-    const img_cols = $("#user-imgs-row > .mdui-col");
     const req = new apiFetch("/api/imgs/scan");
     fetch(req.path, req.args).then((res) => {
       updateProgress(0);
@@ -190,16 +184,19 @@ $("#scan-imgs-bt").on("click", (e) => {
       
       const reader = res.body.getReader();
       const imgs_scanned = [];
-      reader.read().then(function updateScanProgress({ done, value }) {
-        if (done) {
+      const img_cols = $("#user-imgs-row > .mdui-col");
+      reader.read().then(function updateScanProgress({done, value}) {
+        if (!value || done) {
           mdui.snackbar("全部扫描完成");
+          imgs_list.updateActionButtons();
         }
         const img = JSON.parse(new TextDecoder().decode(value));
         imgs_scanned.push(img);
         
         // 替换为扫描后的新图片
         const img_frame = imgs_list.imgEle(img, imgs_scanned.length)
-        img_cols[imgs_scanned.length].replaceWith(img_frame);
+        img_cols.eq(imgs_scanned.length).replaceWith(img_frame);
+        imgs_list.imgs[imgs_scanned.length] = img
         updateProgress(imgs_scanned.length / imgs_list.imgs.length);
         // 下一轮读取
         return reader.read().then(updateScanProgress);

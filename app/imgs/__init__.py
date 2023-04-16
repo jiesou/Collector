@@ -9,6 +9,7 @@ imgs_bp = Blueprint('imgs', __name__)
 @imgs_bp.route('/upload', methods=['POST'])
 def upload_imgs():
     user_imgs = g.user.imgs
+    new_imgs = []
     for file in request.files.getlist('file'):
         name, ext = os.path.splitext(file.filename)
         filename = f'{g.user_id}-{len(user_imgs)}{ext}'
@@ -19,9 +20,10 @@ def upload_imgs():
             user=g.user
         )
         g.db_session.add(img)
+        new_imgs.append(img.as_dict())
         file.save(os.path.join(current_app.config['UPLOAD_FOLDER'], filename))
         
-    return res(current_app, img.as_dict())
+    return res(current_app, new_imgs)
 
 @imgs_bp.route('/list')
 def get_imgs_list():
