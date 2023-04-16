@@ -49,10 +49,12 @@ function updateProgress(percent) {
   if (percent) {
     if (percent >= 1) progress_bar.hide();
     progress_bar = progress_bar.find('.mdui-progress-determinate');
+    progress_bar.find('.mdui-progress-indeterminate').hide();
   } else {
     progress_bar = progress_bar.find('.mdui-progress-indeterminate');
     progress_bar.show();
   }
+  console.log(`${percent*100}%`)
   progress_bar.css('width', `${percent*100}%`);
   return progress_bar
 }
@@ -132,7 +134,7 @@ class ImgsList {
         message: "确定删除？",
         buttonText: "确定",
         onButtonClick: () => {
-            delete_bt.attr("disabled");
+            delete_bt.prop("disabled");
             new apiFetch(`/api/imgs/delete/${index}`).send().then(() => {
               delete_bt.closest("div.mdui-col").remove();
               imgs_list.refresh();
@@ -153,8 +155,9 @@ imgs_list.refresh().then(() => {
       upload_bt.attr('disabled');
       updateProgress(0);
       const data = new FormData();
-      for (let file of e.target.files) {
-        data.append('file', file);
+      for (let i = e.target.files.length - 1; i >= 0; i--) {
+        // 倒序
+        data.append('file', e.target.files[i]);
       }
       new apiFetch("/api/imgs/upload", {
           method: 'POST',
@@ -176,7 +179,7 @@ imgs_list.refresh().then(() => {
 
 // 开始识别功能
 $("#scan-imgs-bt").on("click", (e) => {
-    $(e.target).attr('disabled');
+    $(e.target).prop('disabled');
     const req = new apiFetch("/api/imgs/scan");
     fetch(req.path, req.args).then((res) => {
       updateProgress(0);
@@ -196,7 +199,7 @@ $("#scan-imgs-bt").on("click", (e) => {
         // 替换为扫描后的新图片
         const img_frame = imgs_list.imgEle(img, imgs_scanned.length)
         img_cols.eq(imgs_scanned.length).replaceWith(img_frame);
-        imgs_list.imgs[imgs_scanned.length] = img
+        imgs_list.imgs[imgs_scanned.length - 1] = img
         updateProgress(imgs_scanned.length / imgs_list.imgs.length);
         // 下一轮读取
         return reader.read().then(updateScanProgress);
