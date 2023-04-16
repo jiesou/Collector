@@ -97,10 +97,14 @@ class ImgsList {
     if (this.imgs.findIndex((img) => img.document_status === "scanned") != -1) {
       // 有任意一张图片扫描过就启用 生成答案 按钮
       $("#output-imgs-bt").removeAttr("disabled");
+    } else {
+      $("#output-imgs-bt").attr("disabled");
     }
     if (this.imgs.findIndex((img) => img.document_status === "unscanned") != -1) {
       // 有任意一张图片未扫描就启用 扫描图片 按钮
       $("#scan-imgs-bt").removeAttr('disabled');
+    } else {
+      $("#scan-imgs-bt").attr('disabled');
     }
   }
   
