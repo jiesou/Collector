@@ -13,7 +13,7 @@ def generate_prompt():
     # 未指定需要处理的页数就遍历全部图片
     body.setdefault("indexs", list(range(len(body["imgs"]))))
     full_document = ""
-    for index in body["indexs"]:
+    for index in reversed(body["indexs"]):
         img = body["imgs"][index]
         full_document += getattr(img, "document_text") or ""
     
