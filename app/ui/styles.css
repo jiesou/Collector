@@ -9,6 +9,10 @@
 #imgs-card .mdui-card-content {
     margin-top: 2vh;
 }
+#img-crop-dialog .mdui-dialog-content img {
+    display: block;
+    max-width: 100%;
+}
   /*扫描进度条*/
 #users-imgs-progress .mdui-progress-determinate {
     display: none;

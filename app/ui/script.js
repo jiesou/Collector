@@ -153,12 +153,41 @@ imgs_list.refresh().then(() => {
   const upload_input = $("#upload-img-input");
   upload_input.on("change", (e) => {
       upload_bt.attr('disabled');
-      updateProgress(0);
       const data = new FormData();
+      const reader = new FileReader();
+      
+      reader.addEventListener("load", () =>{
+        img_ele.src = e.target.result;
+        new mdui.Dialog("#img-crop-dialog", {
+          "history": false,
+          "modal": true
+        }).open();
+        $("#img-crop-dialog").on("open.mdui.dialog", (e) => {
+          const dialog = $(e.target);
+          const img_ele = dialog.children(".mdui-dialog-content").children("img");
+    
+          const cropper = new cropper(img_ele, {
+            aspectratio: 16 / 9,
+            crop(event) {
+              console.log(event.detail.x);
+              console.log(event.detail.y);
+              console.log(event.detail.width);
+              console.log(event.detail.height);
+              console.log(event.detail.rotate);
+              console.log(event.detail.scalex);
+              console.log(event.detail.scaley);
+            },
+          });
+        });
+        data.append('file', e.target.result);
+      }, false);
+
       for (let i = e.target.files.length - 1; i >= 0; i--) {
         // 倒序
-        data.append('file', e.target.files[i]);
+        reader.readAsDataURL(e.target.files[i]);
       }
+      
+      updateProgress(0);
       new apiFetch("/api/imgs/upload", {
           method: 'POST',
           body: data
