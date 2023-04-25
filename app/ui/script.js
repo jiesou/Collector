@@ -156,17 +156,14 @@ imgs_list.refresh().then(() => {
       const data = new FormData();
       const reader = new FileReader();
       
-      reader.addEventListener("load", () =>{
-        img_ele.src = e.target.result;
-        new mdui.Dialog("#img-crop-dialog", {
-          "history": false,
-          "modal": true
-        }).open();
-        $("#img-crop-dialog").on("open.mdui.dialog", (e) => {
-          const dialog = $(e.target);
-          const img_ele = dialog.children(".mdui-dialog-content").children("img");
-    
-          const cropper = new cropper(img_ele, {
+      reader.addEventListener("load", (e) =>{
+        const result = e.target.result;
+        const dialog = $("#img-crop-dialog");
+        const img_ele = dialog.find(".mdui-dialog-content img");
+
+        img_ele.attr("src", result);
+        dialog.on("open.mdui.dialog", (e) => {
+          const cropper = new Cropper(img_ele[0], {
             aspectratio: 16 / 9,
             crop(event) {
               console.log(event.detail.x);
@@ -179,8 +176,17 @@ imgs_list.refresh().then(() => {
             },
           });
         });
-        data.append('file', e.target.result);
-      }, false);
+        dialog.on("confirm.mdui.dialog", (e) => {
+          data.append('file', e.target.result);
+        });
+        dialog.on("cancel.mdui.dialog", (e) => {
+           data.append('file', e.target.result);
+        });
+        new mdui.Dialog("#img-crop-dialog", {
+          "history": false,
+          "modal": true
+        }).open();
+      });
 
       for (let i = e.target.files.length - 1; i >= 0; i--) {
         // 倒序
