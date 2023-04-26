@@ -150,14 +150,16 @@ class ImgsList {
 // 上传图片功能
 $("#upload-img-input").on("change", (e) => {
   const data = new FormData();
-  const reader = new FileReader();
 
-  reader.addEventListener("load", (e) =>{
+  const total_length = e.target.files.length;
+  let added_length = 0;
+  for (let i = e.target.files.length - 1; i >= 0; i--) {
+    const file = e.target.files[i];
     // 每张上传的图片图片 load 时
     const dialog = $("#img-crop-dialog");
     const img_ele = dialog.find("img");
-    img_ele.attr("src", result);
-    
+    img_ele.attr("src", URL.createObjectURL(file));
+
     // 图片裁剪 dialog
     dialog.one("open.mdui.dialog", (e) => {
       const cropper = new Cropper(img_ele[0], {
@@ -176,29 +178,21 @@ $("#upload-img-input").on("change", (e) => {
         },
       });
     });
-    
+
     dialog.one("confirm.mdui.dialog", () => {
       cropper.getCroppedCanvas().toBlob((blob) => appendForm(blob));
     });
     dialog.one("cancel.mdui.dialog", () => {
-      // append as blob file
-      appendForm(e.target.result);
+      appendForm(file);
     });
     new mdui.Dialog("#img-crop-dialog", {
       "history": false,
       "modal": true
     }).open();
-  });
-  
-  const total_length = e.target.files.length;
-  let added_length = 0;
-  for (let i = e.target.files.length - 1; i >= 0; i--) {
-    // 倒序调用 FileReader load 图片
-    reader.readAsDataURL(e.target.files[i]);
   }
   
-  function appendForm(file_url) {
-    data.append("image", file_url);
+  function appendForm(file) {
+    data.append("file", file);
     if (!++added_length >= total_length) return;
     // 如果全部图片都已裁剪完，就开始上传
     updateProgress(0);
