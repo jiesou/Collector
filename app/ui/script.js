@@ -153,44 +153,41 @@ $("#upload-img-input").on("change", (e) => {
 
   const total_length = e.target.files.length;
   let added_length = 0;
-  for (let i = e.target.files.length - 1; i >= 0; i--) {
-    const file = e.target.files[i];
+  function nextDialog(index) {
+    if (index >= total_length) return;
+    const file = e.target.files[index];
     // 每张上传的图片图片 load 时
     const dialog = $("#img-crop-dialog");
-    const img_ele = dialog.find("img");
+    const img_ele = dialog.children(".mdui-dialog-content")
+      .empty()
+      .append($("<span><img></span>"))
+      .find("img");
     img_ele.attr("src", URL.createObjectURL(file));
-
     // 图片裁剪 dialog
+    let cropper;
     dialog.one("open.mdui.dialog", (e) => {
-      const cropper = new Cropper(img_ele[0], {
+      cropper = new Cropper(img_ele[0], {
         viewMode: 1,
         center: false,
         highlight: false,
-        dragMode: 'move',
-        crop(event) {
-          console.log(event.detail.x);
-          console.log(event.detail.y);
-          console.log(event.detail.width);
-          console.log(event.detail.height);
-          console.log(event.detail.rotate);
-          console.log(event.detail.scalex);
-          console.log(event.detail.scaley);
-        },
+        dragMode: 'move'
       });
     });
 
     dialog.one("confirm.mdui.dialog", () => {
       cropper.getCroppedCanvas().toBlob((blob) => appendForm(blob));
+      nextDialog(index + 1);
     });
     dialog.one("cancel.mdui.dialog", () => {
       appendForm(file);
+      nextDialog(index + 1);
     });
     new mdui.Dialog("#img-crop-dialog", {
       "history": false,
       "modal": true
     }).open();
   }
-  
+  nextDialog(0);
   function appendForm(file) {
     data.append("file", file);
     if (!++added_length >= total_length) return;
