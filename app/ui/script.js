@@ -245,7 +245,7 @@ $("#scan-imgs-bt").on("click", (e) => {
         imgs_scanned.push(img);
         
         // 替换为扫描后的新图片
-        const img_frame = imgs_list.imgEle(img, imgs_scanned.length)
+        const img_frame = imgs_list.imgEle(img, imgs_scanned.length - 1)
         img_cols.eq(imgs_scanned.length).replaceWith(img_frame);
         imgs_list.imgs[imgs_scanned.length - 1] = img
         updateProgress(imgs_scanned.length / imgs_list.imgs.length);
