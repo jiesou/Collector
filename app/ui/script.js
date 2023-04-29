@@ -152,45 +152,50 @@ $("#upload-img-input").on("change", (e) => {
   const data = new FormData();
 
   const total_length = e.target.files.length;
-  let added_length = 0;
-  function nextDialog(index) {
-    if (index >= total_length) return;
-    const file = e.target.files[index];
+  let crop_index = 0;
+  function nextDialog() {
+    if (crop_index >= total_length) return;
+    const file = e.target.files[crop_index];
     // 每张上传的图片图片 load 时
     const dialog = $("#img-crop-dialog");
+    dialog.children(".mdui-dialog-title").text(`裁剪图片 ${crop_index + 1}/${total_length}`);
     const img_ele = dialog.children(".mdui-dialog-content")
       .empty()
       .append($("<span><img></span>"))
       .find("img");
     img_ele.attr("src", URL.createObjectURL(file));
     // 图片裁剪 dialog
-    let cropper;
-    dialog.one("open.mdui.dialog", (e) => {
-      cropper = new Cropper(img_ele[0], {
-        viewMode: 1,
-        center: false,
-        highlight: false,
-        dragMode: 'move'
-      });
+    const cropper = new Cropper(img_ele[0], {
+      viewMode: 1,
+      center: false,
+      highlight: false,
+      dragMode: 'move'
     });
-
+    dialog.one("opened.mdui.dialog", (e) => {
+      e._detail.inst.handleUpdate();
+    });
     dialog.one("confirm.mdui.dialog", () => {
       cropper.getCroppedCanvas().toBlob((blob) => appendForm(blob));
-      nextDialog(index + 1);
     });
     dialog.one("cancel.mdui.dialog", () => {
       appendForm(file);
-      nextDialog(index + 1);
+    });
+    dialog.one("closed.mdui.dialog", (e) => {
+      e._detail.inst.destroy();
+      cropper.destroy();
+      setTimeout(() => {
+        crop_index ++;
+        nextDialog();
+      }, 100);
     });
     new mdui.Dialog("#img-crop-dialog", {
-      "history": false,
-      "modal": true
+      "history": false
     }).open();
   }
-  nextDialog(0);
+  nextDialog();
   function appendForm(file) {
     data.append("file", file);
-    if (!++added_length >= total_length) return;
+    if (crop_index < total_length - 1) return;
     // 如果全部图片都已裁剪完，就开始上传
     updateProgress(0);
     new apiFetch("/api/imgs/upload", {
