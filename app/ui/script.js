@@ -181,6 +181,7 @@ $("#upload-img-input").on("change", (e) => {
       appendForm(file);
     });
     dialog.one("closed.mdui.dialog", (e) => {
+      dialog.off();
       e._detail.inst.destroy();
       cropper.destroy();
       setTimeout(() => {
