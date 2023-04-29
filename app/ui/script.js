@@ -68,7 +68,9 @@ class ImgsList {
   
   async refresh(append_imgs) {
     const imgs = append_imgs || await new apiFetch("/api/imgs/list").send();
+    let imgs_start_index = 0;
     if (append_imgs) {
+      imgs_start_index = this.imgs.length;
       this.imgs.push(...imgs);
     } else {
       this.imgs = imgs
@@ -78,8 +80,9 @@ class ImgsList {
     let imgs_loaded = 0;
     let imgs_scanned = 0;
     const imgs_fragment = [];
-    imgs.forEach((img, index) => {
-      const img_frame = this.imgEle(img, index);
+    for (let i = imgs_start_index; i < this.imgs.length; i++) {
+      const img = this.imgs[i];
+      const img_frame = this.imgEle(img, i);
       
       img_frame.find('img').on("load", () => {
           imgs_loaded ++;
@@ -89,7 +92,7 @@ class ImgsList {
       if (img.document_status === 'scanned') imgs_scanned ++;
       
       imgs_fragment.push(img_frame);
-    });
+    }
     this.list_ele.append(...imgs_fragment);
     
     // 没图片可加载就隐藏进度条（正常需要图片加载完成才能隐藏进度条）
