@@ -30,6 +30,7 @@ with Cloudflare: <https://azure-tokyo.gfwin.icu>
 ```shell
 git clone https://github.com/jiesou/Collector
 cd Collector
+```
 
 ### 1. 配置
 
