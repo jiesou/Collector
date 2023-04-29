@@ -33,6 +33,17 @@
                 </button>
             </div>
             
+            <div id="img-crop-dialog" class="mdui-dialog">
+              <div class="mdui-dialog-title">裁剪图片</div>
+              <div class="mdui-dialog-content">
+                <span><img></span>
+              </div>
+              <div class="mdui-dialog-actions">
+                <button class="mdui-btn mdui-ripple" mdui-dialog-cancel>原样</button>
+                <button class="mdui-btn mdui-ripple" mdui-dialog-confirm>裁剪</button>
+              </div>
+            </div>
+            
             <div class="mdui-card-content">
 
                 <div id="users-imgs-progress" class="mdui-progress">
@@ -112,8 +123,11 @@
             let jQuery = mdui.$;
         </script>
         <script src="https://cdn.staticfile.org/marked/4.2.12/marked.min.js"></script>
-
+        <script src="https://cdn.staticfile.org/cropperjs/1.5.13/cropper.min.js"></script>
         <script src="script.js"></script>
+        
+        <link rel="stylesheet" href="https://cdn.staticfile.org/cropperjs/1.5.13/cropper.min.css" />
+
         <noscript class="mdui-typo-headline-opacity"> This application requires JavaScript </noscript>
     </body>
 </html>

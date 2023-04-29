@@ -150,32 +150,77 @@ class ImgsList {
   }
 }
 
+// 上传图片功能
+$("#upload-img-input").on("change", (e) => {
+  const data = new FormData();
+
+  const total_length = e.target.files.length;
+  let crop_index = 0;
+  function nextDialog() {
+    if (crop_index >= total_length) return;
+    const file = e.target.files[crop_index];
+    // 每张上传的图片图片 load 时
+    const dialog = $("#img-crop-dialog");
+    dialog.children(".mdui-dialog-title").text(`裁剪图片 ${crop_index + 1}/${total_length}`);
+    const img_ele = dialog.children(".mdui-dialog-content")
+      .empty()
+      .append($("<span><img></span>"))
+      .find("img");
+    img_ele.attr("src", URL.createObjectURL(file));
+    // 图片裁剪 dialog
+    const cropper = new Cropper(img_ele[0], {
+      viewMode: 1,
+      center: false,
+      highlight: false,
+      dragMode: 'move'
+    });
+    dialog.one("opened.mdui.dialog", (e) => {
+      e._detail.inst.handleUpdate();
+    });
+    dialog.one("confirm.mdui.dialog", () => {
+      cropper.getCroppedCanvas().toBlob((blob) => appendForm(blob));
+    });
+    dialog.one("cancel.mdui.dialog", () => {
+      appendForm(file);
+    });
+    dialog.one("closed.mdui.dialog", (e) => {
+      dialog.off();
+      e._detail.inst.destroy();
+      cropper.destroy();
+      setTimeout(() => {
+        crop_index ++;
+        nextDialog();
+      }, 100);
+    });
+    new mdui.Dialog("#img-crop-dialog", {
+      "history": false
+    }).open();
+  }
+  nextDialog();
+  function appendForm(file) {
+    data.append("file", file);
+    if (crop_index < total_length - 1) return;
+    // 如果全部图片都已裁剪完，就开始上传
+    updateProgress(0);
+    new apiFetch("/api/imgs/upload", {
+      method: 'POST',
+      body: data
+    }).send().then((new_imgs) => {
+      $("#upload-img-bt").removeAttr('disabled');
+      updateProgress(1);
+      imgs_list.refresh(new_imgs);
+    });
+  }
+});
+
 const imgs_list = new ImgsList();
 /* 初始化 imgs_list，同时激活上传图片功能 */
 imgs_list.refresh().then(() => {
-  const upload_input = $("#upload-img-input");
-  upload_input.on("change", (e) => {
-      upload_bt.attr('disabled');
-      updateProgress(0);
-      const data = new FormData();
-      for (let i = e.target.files.length - 1; i >= 0; i--) {
-        // 倒序
-        data.append('file', e.target.files[i]);
-      }
-      new apiFetch("/api/imgs/upload", {
-          method: 'POST',
-          body: data
-      }).send().then((new_imgs) => {
-          upload_bt.removeAttr('disabled');
-          updateProgress(1);
-          imgs_list.refresh(new_imgs);
-      });
-  });
-  
   const upload_bt = $("#upload-img-bt");
-  upload_bt.on("click", (e) => {
-    // 当点击上传图片按钮时触发被隐藏的 input
-    upload_input.trigger('click');
+  upload_bt.on("click", () => {
+    upload_bt.attr('disabled');
+    // 当点击上传图片按钮时触发被隐藏的 input 启动真正逻辑
+    $("#upload-img-input").trigger('click');
   });
   upload_bt.removeAttr('disabled');
 });
