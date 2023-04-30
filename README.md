@@ -18,7 +18,7 @@
 
 Azure Source: <https://collector.jiecs.top>
 
-with Cloudflare: <https://azure-tokyo.gfwin.icu>
+with Cloudflare: <https://azure-tokyo.loliis.top>
 
 ## 使用
 
