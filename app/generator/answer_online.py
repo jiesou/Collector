@@ -1,5 +1,7 @@
-import os, time
+import openai
+import os
 
+openai.api_key = os.getenv("OPENAI_API_KEY")
 
 def choiceQues(ques):
     text = "{num}. {text}\n".format_map(ques)
@@ -30,14 +32,15 @@ class AnswersGenerator():
     
     def generate(self):
         print(self.apiMessages)
-        def completion():
-            for i in range(10):
-                yield {"choices": [{"delta": {"content": str(i)}}]}
-                time.sleep(0.5)
+        completion = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            temperature=0.3,
+            stream=True,
+            messages=self.apiMessages)
         
         text = ""
-        for event in completion():
-            text_snippet = event['choices'][0]['delta'].get('content', '')
+        for event in completion:
+            text_snippet = event.choices[0]['delta'].get('content', '')
             text += text_snippet
             yield text_snippet
         self.messages.append({"role": "assistant", "content": text})

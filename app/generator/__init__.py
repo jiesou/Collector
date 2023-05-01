@@ -1,6 +1,6 @@
 from flask import Blueprint, current_app, stream_with_context, request, g
 from concurrent.futures import ThreadPoolExecutor
-import json
+import threading
 from units import res, parse_body, Message
 from .answer import AnswersGenerator
 
@@ -20,20 +20,19 @@ def generate_prompt():
     prompt = AnswersGenerator.generatePrompt(full_document)
     return res(current_app, {'prompt': prompt})
 
-executor = ThreadPoolExecutor(max_workers=2)
+executor = ThreadPoolExecutor(max_workers=8)
 
 def thinking_bgtask(message):
-    dict_messages = [msg.as_dict() for msg in g.user.messages]
-    before_length = len(dict_messages)
-
-    generator = AnswersGenerator(dict_messages if dict_messages else None)
+    threading.current_thread().setName(g.user_id)
+    old_dict_messages = [msg.as_dict() for msg in g.user.messages]
+    generator = AnswersGenerator(old_dict_messages if old_dict_messages else None)
 
     generator.send(message.as_dict())
     for text_snippet in generator.generate():
         yield text_snippet
 
     # 切片获取发送后新增的几条消息
-    new_messages = generator.messages[before_length:]
+    new_messages = generator.messages[len(old_dict_messages):]
     print(new_messages)
     # 向数据库中新增消息
     for message in new_messages:
@@ -52,7 +51,19 @@ def generator_send():
         tag=request.args.get('tag'),
         user=g.user
     )
-    
+
+    if len(executor._threads) >= executor._max_workers:
+        return res(current_app, {
+            "code": 500,
+            "msg": "Server is busy."
+        });
+    for thread in executor._threads:
+        print("name", thread.getName())
+        if thread.getName() == g.user_id:
+            return res(current_app, {
+                "code": -1,
+                "msg": "Once a time."
+            });
     bgtask = executor.submit(thinking_bgtask, message)
     
     def stream():

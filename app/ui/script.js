@@ -334,19 +334,19 @@ class MessagesList {
       const list_ele = this.list_ele.append(...message_fragment);
       // 获取最后一个添加的文本元素
       const text_ele = list_ele.find('.mdui-list-item-text').last();
+
       const reader = res.body.getReader();
 
       // 读取流，动态添加响应
-      let received_text = ""
-      reader.read().then(function appendAnswer({ done, value }) {
-        if (done) {
+      let reveived_text = "";
+      reader.read().then(function appendMsgText({done, value}) {
+        if (!value || done) {
           callback();
           return;
         }
-        received_text += new TextDecoder().decode(value)
-        text_ele.html(marked.parse(received_text));
-        
-        return reader.read().then(appendAnswer);
+        reveived_text += new TextDecoder().decode(value);
+        text_ele.html(marked.parse(reveived_text));
+        return reader.read().then(appendMsgText);
       });
       this.#getDivider();
     });
