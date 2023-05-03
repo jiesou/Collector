@@ -1,4 +1,5 @@
 from flask import Flask, send_from_directory, stream_with_context, request, g
+from sqlalchemy.orm import scoped_session, sessionmaker
 from werkzeug.exceptions import HTTPException
 import os
 from units import res, User, db
@@ -19,6 +20,8 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(app)
 with app.app_context():
     db.create_all()
+    app.db_session_factory = sessionmaker(bind=db.engine)
+    db_session = scoped_session(app.db_session_factory)
 app.register_blueprint(imgs_bp, url_prefix='/api/imgs')
 app.register_blueprint(generator_bp, url_prefix='/api/generator')
 
@@ -35,7 +38,7 @@ def http_error(e):
 def authentication():
     if not request.path.startswith("/api/"): return None
     if "User-Id" in request.headers:
-        g.db_session = db.session
+        g.db_session = db_session
         g.user_id = request.headers['User-Id']
         
         g.user = g.db_session.query(User).get(g.user_id)
@@ -53,6 +56,11 @@ def save_users(response):
     if request.path.startswith("/api/"):
         g.db_session.commit()
     return response
+
+@app.teardown_appcontext
+def shutdown_session(exception=None):
+    if hasattr(g, 'db_session'):
+        g.db_session.remove()
 
 @app.route('/')
 def index():

@@ -1,7 +1,7 @@
 from flask import Blueprint, current_app, stream_with_context, request, g
+from sqlalchemy.orm import scoped_session
 from concurrent.futures import ThreadPoolExecutor
-import threading
-from units import res, parse_body, Message
+from units import res, parse_body, Message, User
 from .answer import AnswersGenerator
 
 generator_bp = Blueprint('Generator', __name__)
@@ -22,26 +22,30 @@ def generate_prompt():
 
 executor = ThreadPoolExecutor(max_workers=8)
 
-def thinking_bgtask(message):
-    threading.current_thread().setName(g.user_id)
-    old_dict_messages = [msg.as_dict() for msg in g.user.messages]
-    generator = AnswersGenerator(old_dict_messages if old_dict_messages else None)
+def thinking_bgtask(message, user):
+    with current_app.app_context():
+        db_session = scoped_session(current_app.db_session_factory)
+        old_dict_messages = [msg.as_dict() for msg in user.messages]
+        generator = AnswersGenerator(old_dict_messages if old_dict_messages else None)
 
-    generator.send(message.as_dict())
-    for text_snippet in generator.generate():
-        yield text_snippet
+        generator.send(message.as_dict())
+        for text_snippet in generator.generate():
+            print("text_snippet", text_snippet)
+            yield text_snippet
 
+    print("generator.messages", generator.messages)
     # 切片获取发送后新增的几条消息
     new_messages = generator.messages[len(old_dict_messages):]
-    print(new_messages)
+    print("new_messages", new_messages)
     # 向数据库中新增消息
     for message in new_messages:
-        g.db_session.add(Message(
+        db_session.add(Message(
             role=message.get("role"),
             content=message.get("content"),
             tag=message.get("tag"),
-            user=g.user))
-    g.db_session.commit()
+            user=user))
+    print("commit")
+    db_session.commit()
 
 @generator_bp.route('/send', methods=['POST'])
 def generator_send():
@@ -64,7 +68,8 @@ def generator_send():
                 "code": -1,
                 "msg": "Once a time."
             });
-    bgtask = executor.submit(thinking_bgtask, message)
+    bgtask = executor.submit(thinking_bgtask, message, g.user)
+    bgtask.name = g.user_id
     
     def stream():
         yield ""

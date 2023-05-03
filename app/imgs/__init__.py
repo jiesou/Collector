@@ -68,6 +68,6 @@ def scan_imgs():
         yield ""
         for document in bgtask.result():
             yield f"{document}\n"
-    return stream_with_context(stream())
+    return stream()
 
 

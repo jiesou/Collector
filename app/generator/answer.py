@@ -29,7 +29,6 @@ class AnswersGenerator():
         })
     
     def generate(self):
-        print(self.apiMessages)
         def completion():
             for i in range(10):
                 yield {"choices": [{"delta": {"content": str(i)}}]}
