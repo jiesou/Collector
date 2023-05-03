@@ -157,7 +157,8 @@ $("#upload-img-input").on("change", (e) => {
   const total_length = e.target.files.length;
   let crop_index = 0;
   function nextDialog() {
-    if (crop_index >= total_length) return;
+    if (crop_index >= total_length) uploadForm();
+    // 如果所有图片都裁剪完毕，就上传
     const file = e.target.files[crop_index];
     // 每张上传的图片图片 load 时
     const dialog = $("#img-crop-dialog");
@@ -199,8 +200,8 @@ $("#upload-img-input").on("change", (e) => {
   nextDialog();
   function appendForm(file) {
     data.append("file", file);
-    if (crop_index < total_length - 1) return;
-    // 如果全部图片都已裁剪完，就开始上传
+  }
+  function uploadForm() {
     updateProgress(0);
     new apiFetch("/api/imgs/upload", {
       method: 'POST',
