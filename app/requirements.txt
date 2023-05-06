@@ -1,4 +1,7 @@
 paddleocr>=2.0.1
+flask
 gunicorn
 flask-sqlalchemy
+flask-sqlalchemy-session
+celery
 openai

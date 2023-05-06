@@ -1,6 +1,6 @@
 from flask import Blueprint, current_app, stream_with_context, request, g
-from sqlalchemy.orm import scoped_session
-from concurrent.futures import ThreadPoolExecutor
+from lib.flask_sqlalchemy_session import current_session
+from celery import shared_task
 from units import res, parse_body, Message, User
 from .answer import AnswersGenerator
 
@@ -20,12 +20,10 @@ def generate_prompt():
     prompt = AnswersGenerator.generatePrompt(full_document)
     return res(current_app, {'prompt': prompt})
 
-executor = ThreadPoolExecutor(max_workers=8)
-
+@shared_task
 def thinking_bgtask(message, user):
-    with current_app.app_context():
-        db_session = scoped_session(current_app.db_session_factory)
         old_dict_messages = [msg.as_dict() for msg in user.messages]
+        old_len = len(old_dict_messages)
         generator = AnswersGenerator(old_dict_messages if old_dict_messages else None)
 
         generator.send(message.as_dict())
@@ -33,19 +31,20 @@ def thinking_bgtask(message, user):
             print("text_snippet", text_snippet)
             yield text_snippet
 
-    print("generator.messages", generator.messages)
-    # 切片获取发送后新增的几条消息
-    new_messages = generator.messages[len(old_dict_messages):]
-    print("new_messages", new_messages)
-    # 向数据库中新增消息
-    for message in new_messages:
-        db_session.add(Message(
-            role=message.get("role"),
-            content=message.get("content"),
-            tag=message.get("tag"),
-            user=user))
-    print("commit")
-    db_session.commit()
+        print("generator.messages", generator.messages)
+        print("old_dict_messages", old_dict_messages)
+        # 切片获取发送后新增的几条消息
+        new_messages = generator.messages[old_len:]
+        print("new_messages", new_messages)
+        # 向数据库中新增消息
+        for message in new_messages:
+            current_session.add(Message(
+                role=message.get("role"),
+                content=message.get("content"),
+                tag=message.get("tag"),
+                user=user))
+        print("commit")
+        current_session.commit()
 
 @generator_bp.route('/send', methods=['POST'])
 def generator_send():
@@ -56,18 +55,18 @@ def generator_send():
         user=g.user
     )
 
-    if len(executor._threads) >= executor._max_workers:
-        return res(current_app, {
-            "code": 500,
-            "msg": "Server is busy."
-        });
-    for thread in executor._threads:
-        print("name", thread.getName())
-        if thread.getName() == g.user_id:
-            return res(current_app, {
-                "code": -1,
-                "msg": "Once a time."
-            });
+    # if len(executor._threads) >= executor._max_workers:
+        # return res(current_app, {
+            # "code": 500,
+            # "msg": "Server is busy."
+        # });
+    # for thread in executor._threads:
+        # print("name", thread.getName())
+        # if thread.getName() == g.user_id:
+            # return res(current_app, {
+                # "code": -1,
+                # "msg": "Once a time."
+            # });
     bgtask = executor.submit(thinking_bgtask, message, g.user)
     bgtask.name = g.user_id
     
@@ -85,5 +84,5 @@ def generator_messages():
 @generator_bp.route('/clear')
 def generator_clean():
     for msg in g.user.messages:
-        g.db_session.delete(msg)
+        current_session.delete(msg)
     return res(current_app, [])
